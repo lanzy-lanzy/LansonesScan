@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.lansonesscan.ui.theme.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
 
@@ -31,6 +32,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .primaryGradientBackground()
             .verticalScroll(rememberScrollState())
     ) {
         // Header
@@ -116,7 +118,7 @@ fun SettingsScreen(
                     )
                     InfoRow(
                         label = "Developer",
-                        value = "ML Lansones Team"
+                        value = "The Research Team"
                     )
                     InfoRow(
                         label = "Model",

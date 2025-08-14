@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash Screen Theme for Android 12+ -->
+    <style name="Theme.LansonesScan.Splash" parent="Theme.LansonesScan">
+        <!-- Basic splash screen setup -->
+        <item name="android:windowBackground">@drawable/splash_background_legacy</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+    
+    <!-- Legacy Splash Screen Theme for Android < 12 -->
+    <style name="Theme.LansonesScan.Splash.Legacy" parent="Theme.LansonesScan">
+        <item name="android:windowBackground">@drawable/splash_background_legacy</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

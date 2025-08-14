@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.lansonesscan.ui.theme.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ml.lansonesscan.domain.model.AnalysisType
 import com.ml.lansonesscan.domain.model.ScanMetadata
@@ -48,7 +49,9 @@ fun HistoryScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .primaryGradientBackground()
     ) {
         // Header
         Surface(

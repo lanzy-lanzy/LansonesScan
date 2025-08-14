@@ -89,10 +89,16 @@ interface ScanRepository {
     suspend fun getDiseaseDetectedCount(): Int
     
     /**
-     * Gets the count of healthy scans
-     * @return Number of healthy scans
+     * Gets the count of healthy scans (lansones items without disease)
+     * @return Number of healthy lansones scans
      */
     suspend fun getHealthyScansCount(): Int
+
+    /**
+     * Gets the count of non-lansones items
+     * @return Number of non-lansones scans
+     */
+    suspend fun getNonLansonesCount(): Int
     
     /**
      * Gets the total storage size of all scan images

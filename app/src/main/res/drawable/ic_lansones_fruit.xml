@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Main lansones cluster stem -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M58,15 L62,15 L62,35 L58,35 Z" />
+
+    <!-- Small leaf -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M62,18 Q68,16 70,20 Q68,24 62,22 Z" />
+
+    <!-- Top lansones fruit (small round yellow) -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M60,30 A8,8 0 1,1 60,46 A8,8 0 1,1 60,30 Z" />
+
+    <!-- Top fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M57,32 A3,3 0 1,1 57,38 A3,3 0 1,1 57,32 Z" />
+
+    <!-- Second row - left fruit -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M48,43 A9,9 0 1,1 48,61 A9,9 0 1,1 48,43 Z" />
+
+    <!-- Second row - left fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M45,46 A3,3 0 1,1 45,52 A3,3 0 1,1 45,46 Z" />
+
+    <!-- Second row - right fruit -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M72,43 A9,9 0 1,1 72,61 A9,9 0 1,1 72,43 Z" />
+
+    <!-- Second row - right fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M69,46 A3,3 0 1,1 69,52 A3,3 0 1,1 69,46 Z" />
+
+    <!-- Third row - center fruit (largest) -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M60,57 A11,11 0 1,1 60,79 A11,11 0 1,1 60,57 Z" />
+
+    <!-- Third row - center fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M56,60 A4,4 0 1,1 56,68 A4,4 0 1,1 56,60 Z" />
+
+    <!-- Fourth row - left fruit -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M45,74 A8,8 0 1,1 45,90 A8,8 0 1,1 45,74 Z" />
+
+    <!-- Fourth row - left fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M42,76 A3,3 0 1,1 42,82 A3,3 0 1,1 42,76 Z" />
+
+    <!-- Fourth row - right fruit -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M75,74 A8,8 0 1,1 75,90 A8,8 0 1,1 75,74 Z" />
+
+    <!-- Fourth row - right fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M72,76 A3,3 0 1,1 72,82 A3,3 0 1,1 72,76 Z" />
+
+    <!-- Bottom fruit -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M60,88 A7,7 0 1,1 60,102 A7,7 0 1,1 60,88 Z" />
+
+    <!-- Bottom fruit highlight -->
+    <path
+        android:fillColor="#FFEB3B"
+        android:fillAlpha="0.6"
+        android:pathData="M57,89.5 A2.5,2.5 0 1,1 57,94.5 A2.5,2.5 0 1,1 57,89.5 Z" />
+
+    <!-- Connecting stems between fruits -->
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="2"
+        android:pathData="M60,35 L60,43" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M60,43 L48,43" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M60,43 L72,43" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="2"
+        android:pathData="M60,61 L60,57" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M60,79 L45,79" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M60,79 L75,79" />
+
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="2"
+        android:pathData="M60,79 L60,88" />
+</vector>

@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.lansonesscan.ui.theme.*
+import com.ml.lansonesscan.ui.components.*
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
 
 /**
@@ -28,46 +30,26 @@ fun QuickActionButtons(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = "Quick Actions",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Medium
         )
-        
-        // Primary action - Quick Scan
-        Button(
+
+        // Primary action - Quick Scan with minimal styling
+        PrimaryGradientButton(
+            text = "Start Quick Scan",
             onClick = onQuickScanClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Scanner,
-                    contentDescription = "Quick scan",
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "Start Quick Scan",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-        
-        // Secondary actions row
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Scanner
+        )
+
+        // Secondary actions row with reduced spacing
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             QuickActionCard(
                 icon = Icons.Default.CameraAlt,
@@ -76,7 +58,7 @@ fun QuickActionButtons(
                 onClick = onCameraClick,
                 modifier = Modifier.weight(1f)
             )
-            
+
             QuickActionCard(
                 icon = Icons.Default.PhotoLibrary,
                 title = "Gallery",
@@ -99,41 +81,13 @@ private fun QuickActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    ActionGradientCard(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
         onClick = onClick,
-        modifier = modifier.height(80.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+        modifier = modifier.height(72.dp)
+    )
 }
 
 /**

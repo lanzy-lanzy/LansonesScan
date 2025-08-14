@@ -13,32 +13,49 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkGreen,
-    secondary = VibrantYellow,
+    primary = BrandGreen,
+    secondary = BrandYellow,
+    tertiary = DarkGreenVariant,
     background = AlmostBlack,
     surface = DarkSurface,
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
+    surfaceVariant = DarkSurfaceVariant,
+    onPrimary = BrandBlack,
+    onSecondary = BrandBlack,
+    onTertiary = Color.White,
     onBackground = Color.White,
     onSurface = Color.White,
+    onSurfaceVariant = Color.White,
+    primaryContainer = DarkGreen,
+    secondaryContainer = YellowVariant,
+    onPrimaryContainer = BrandBlack,
+    onSecondaryContainer = BrandBlack,
     error = DiseaseRed,
-    onError = Color.White
+    onError = Color.White,
+    outline = BrandGreen.copy(alpha = 0.5f),
+    outlineVariant = BrandYellow.copy(alpha = 0.3f)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Green40,
-    secondary = Amber40,
-    tertiary = GreenGrey40,
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    surfaceVariant = SurfaceVariant,
-    error = DiseaseRed,
+    primary = BrandGreen,
+    secondary = BrandYellow,
+    tertiary = LightGreenVariant,
+    background = Color.White,
+    surface = LightSurface,
+    surfaceVariant = LightSurfaceVariant,
     onPrimary = Color.White,
-    onSecondary = Color.White,
+    onSecondary = BrandBlack,
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    onError = Color.White
+    onBackground = BrandBlack,
+    onSurface = BrandBlack,
+    onSurfaceVariant = BrandBlack.copy(alpha = 0.7f),
+    primaryContainer = LightGreen,
+    secondaryContainer = LightYellow,
+    onPrimaryContainer = BrandBlack,
+    onSecondaryContainer = BrandBlack,
+    error = DiseaseRed,
+    onError = Color.White,
+    outline = BrandGreen.copy(alpha = 0.7f),
+    outlineVariant = BrandYellow.copy(alpha = 0.5f)
 )
 
 @Composable

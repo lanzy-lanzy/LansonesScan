@@ -24,6 +24,8 @@ import com.ml.lansonesscan.presentation.dashboard.components.QuickActionFab
 import com.ml.lansonesscan.presentation.dashboard.components.RecentScansCarousel
 import com.ml.lansonesscan.presentation.dashboard.components.StatisticsCard
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
+import com.ml.lansonesscan.ui.theme.*
+import com.ml.lansonesscan.ui.components.*
 
 /**
  * Main Dashboard screen composable
@@ -39,7 +41,6 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
     // Handle navigation events
     LaunchedEffect(uiState.navigationEvent) {
@@ -124,11 +125,12 @@ private fun DashboardContent(
 ) {
     Column(
         modifier = modifier
+            .primaryGradientBackground()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with refresh button
+        // Minimal header with refresh button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -137,23 +139,25 @@ private fun DashboardContent(
             Column {
                 Text(
                     text = "Dashboard",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Monitor your lansones health",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             IconButton(
                 onClick = onRefresh,
                 enabled = !uiState.isLoading
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh"
+                    contentDescription = "Refresh",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -325,7 +329,8 @@ private fun DashboardScreenPreview() {
             statistics = GetScanHistoryUseCase.ScanStatistics(
                 totalScans = 25,
                 diseaseDetectedCount = 8,
-                healthyScansCount = 17,
+                healthyScansCount = 15,
+                nonLansonesCount = 2,
                 totalStorageSize = 1024 * 1024 * 15,
                 diseaseDetectionRate = 32.0f
             ),

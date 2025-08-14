@@ -114,10 +114,22 @@ interface ScanDao {
     suspend fun getDiseaseDetectedCount(): Int
     
     /**
-     * Get count of healthy scans
+     * Get count of healthy scans (backward compatibility - includes all non-diseased items)
      */
     @Query("SELECT COUNT(*) FROM scan_results WHERE diseaseDetected = 0")
     suspend fun getHealthyScansCount(): Int
+
+    /**
+     * Get count of healthy lansones scans (non-diseased lansones items only)
+     */
+    @Query("SELECT COUNT(*) FROM scan_results WHERE diseaseDetected = 0 AND analysisType != 'NON_LANSONES'")
+    suspend fun getHealthyLansonesScansCount(): Int
+
+    /**
+     * Get count of non-lansones items
+     */
+    @Query("SELECT COUNT(*) FROM scan_results WHERE analysisType = 'NON_LANSONES'")
+    suspend fun getNonLansonesCount(): Int
     
     /**
      * Get the most recent scan

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="40dp"
+    android:viewportWidth="200"
+    android:viewportHeight="40">
+    
+    <!-- LansonesScan text -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M10,8 L10,32 L25,32 L25,28 L15,28 L15,8 Z" />
+    
+    <!-- A -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M30,32 L34,32 L35,28 L41,28 L42,32 L46,32 L40,8 L36,8 Z M36.5,24 L39.5,24 L38,16 Z" />
+    
+    <!-- N -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M50,8 L50,32 L54,32 L54,18 L60,32 L64,32 L64,8 L60,8 L60,22 L54,8 L50,8 Z" />
+    
+    <!-- S -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M68,32 L82,32 L82,28 L72,28 L72,22 L80,22 L80,18 L72,18 L72,12 L82,12 L82,8 L68,8 Z" />
+    
+    <!-- O -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M86,8 L86,32 L100,32 L100,8 Z M90,12 L90,28 L96,28 L96,12 Z" />
+    
+    <!-- N -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M104,8 L104,32 L108,32 L108,18 L114,32 L118,32 L118,8 L114,8 L114,22 L108,8 L104,8 Z" />
+    
+    <!-- E -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M122,8 L122,32 L136,32 L136,28 L126,28 L126,22 L134,22 L134,18 L126,18 L126,12 L136,12 L136,8 L122,8 Z" />
+    
+    <!-- S -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M140,32 L154,32 L154,28 L144,28 L144,22 L152,22 L152,18 L144,18 L144,12 L154,12 L154,8 L140,8 Z" />
+    
+    <!-- S -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M158,32 L172,32 L172,28 L162,28 L162,22 L170,22 L170,18 L162,18 L162,12 L172,12 L172,8 L158,8 Z" />
+    
+    <!-- C -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M176,8 L176,32 L190,32 L190,28 L180,28 L180,12 L190,12 L190,8 L176,8 Z" />
+    
+    <!-- Small decorative lansones -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M195,13 A2,2 0 1,1 195,17 A2,2 0 1,1 195,13 Z" />
+
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M195,23.5 A1.5,1.5 0 1,1 195,26.5 A1.5,1.5 0 1,1 195,23.5 Z" />
+</vector>

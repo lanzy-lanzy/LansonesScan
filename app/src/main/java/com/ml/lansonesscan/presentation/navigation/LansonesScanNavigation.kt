@@ -12,13 +12,28 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import com.ml.lansonesscan.presentation.ViewModelFactory
@@ -45,6 +60,14 @@ import com.ml.lansonesscan.presentation.scandetail.ScanDetailScreen
 import com.ml.lansonesscan.presentation.settings.SettingsScreen
 import com.ml.lansonesscan.presentation.settings.SettingsViewModel
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.animation.core.*
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import com.ml.lansonesscan.ui.theme.*
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 
 /**
  * Data class representing a bottom navigation item
@@ -98,9 +121,17 @@ fun LansonesScanNavigation(
         NavHost(
             navController = navController,
             startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { slideInHorizontally(animationSpec = tween(300)) { it } + fadeIn(animationSpec = tween(300)) },
+            exitTransition = { slideOutHorizontally(animationSpec = tween(300)) { -it } + fadeOut(animationSpec = tween(300)) },
+            popEnterTransition = { slideInHorizontally(animationSpec = tween(300)) { -it } + fadeIn(animationSpec = tween(300)) },
+            popExitTransition = { slideOutHorizontally(animationSpec = tween(300)) { it } + fadeOut(animationSpec = tween(300)) }
         ) {
-            composable(Screen.Dashboard.route) {
+            composable(
+                Screen.Dashboard.route,
+                enterTransition = { slideInVertically(animationSpec = tween(400)) { it / 2 } + fadeIn(animationSpec = tween(400)) },
+                exitTransition = { slideOutVertically(animationSpec = tween(400)) { -it / 2 } + fadeOut(animationSpec = tween(400)) }
+            ) {
                 val viewModel: DashboardViewModel = viewModel(factory = viewModelFactory)
                 DashboardScreen(
                     viewModel = viewModel,
@@ -115,7 +146,11 @@ fun LansonesScanNavigation(
                     }
                 )
             }
-            composable(Screen.Analysis.route) { backStackEntry ->
+            composable(
+                Screen.Analysis.route,
+                enterTransition = { slideInHorizontally(animationSpec = tween(400)) { it } + fadeIn(animationSpec = tween(400)) },
+                exitTransition = { slideOutHorizontally(animationSpec = tween(400)) { -it } + fadeOut(animationSpec = tween(400)) }
+            ) { backStackEntry ->
                 val viewModel: AnalysisViewModel = viewModel(
                     viewModelStoreOwner = backStackEntry,
                     factory = viewModelFactory
@@ -133,7 +168,11 @@ fun LansonesScanNavigation(
                     }
                 )
             }
-            composable(Screen.History.route) {
+            composable(
+                Screen.History.route,
+                enterTransition = { slideInHorizontally(animationSpec = tween(400)) { it } + fadeIn(animationSpec = tween(400)) },
+                exitTransition = { slideOutHorizontally(animationSpec = tween(400)) { -it } + fadeOut(animationSpec = tween(400)) }
+            ) {
                 val viewModel: HistoryViewModel = viewModel(factory = viewModelFactory)
                 HistoryScreen(
                     viewModel = viewModel,
@@ -142,7 +181,11 @@ fun LansonesScanNavigation(
                     }
                 )
             }
-            composable(Screen.Settings.route) {
+            composable(
+                Screen.Settings.route,
+                enterTransition = { slideInHorizontally(animationSpec = tween(400)) { it } + fadeIn(animationSpec = tween(400)) },
+                exitTransition = { slideOutHorizontally(animationSpec = tween(400)) { -it } + fadeOut(animationSpec = tween(400)) }
+            ) {
                 val viewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
                 SettingsScreen(
                     viewModel = viewModel
@@ -154,7 +197,11 @@ fun LansonesScanNavigation(
                     navArgument("scanId") {
                         type = NavType.StringType
                     }
-                )
+                ),
+                enterTransition = { slideInVertically(animationSpec = tween(500)) { it } + fadeIn(animationSpec = tween(500)) },
+                exitTransition = { slideOutVertically(animationSpec = tween(500)) { it } + fadeOut(animationSpec = tween(500)) },
+                popEnterTransition = { slideInVertically(animationSpec = tween(500)) { -it } + fadeIn(animationSpec = tween(500)) },
+                popExitTransition = { slideOutVertically(animationSpec = tween(500)) { it } + fadeOut(animationSpec = tween(500)) }
             ) { backStackEntry ->
                 val viewModel: ScanDetailViewModel = viewModel(factory = viewModelFactory)
                 val scanId = backStackEntry.arguments?.getString("scanId") ?: ""
@@ -199,7 +246,7 @@ fun LansonesScanNavigation(
 }
 
 /**
- * Bottom navigation bar composable
+ * Enhanced bottom navigation bar with animations and gradient background
  */
 @Composable
 private fun BottomNavigationBar(
@@ -208,35 +255,67 @@ private fun BottomNavigationBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    NavigationBar(
+        modifier = Modifier.background(navigationGradient()),
+        containerColor = Color.Transparent
+    ) {
         bottomNavItems.forEach { item ->
-            val isSelected = currentDestination?.hierarchy?.any { 
-                it.route == item.screen.route 
+            val isSelected = currentDestination?.hierarchy?.any {
+                it.route == item.screen.route
             } == true
+
+            // Animation states
+            val scale by animateFloatAsState(
+                targetValue = if (isSelected) 1.2f else 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "icon_scale"
+            )
+
+            val iconColor by animateColorAsState(
+                targetValue = if (isSelected) BrandYellow else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                animationSpec = tween(durationMillis = 300, easing = EaseInOutCubic),
+                label = "icon_color"
+            )
 
             NavigationBarItem(
                 icon = {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.label
+                        contentDescription = item.label,
+                        tint = iconColor,
+                        modifier = Modifier.scale(scale)
                     )
                 },
                 label = {
-                    Text(text = item.label)
+                    Text(
+                        text = item.label,
+                        color = if (isSelected) BrandGreen else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 },
                 selected = isSelected,
                 onClick = {
                     Log.d("Navigation", "Clicked on ${item.label}, current: ${currentDestination?.route}")
                     if (currentDestination?.route != item.screen.route) {
-                        // Ultra-simple navigation - just navigate directly
                         navController.navigate(item.screen.route)
                         Log.d("Navigation", "Navigated to ${item.screen.route}")
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color.Transparent,
+                    unselectedIconColor = Color.Transparent,
+                    selectedTextColor = Color.Transparent,
+                    unselectedTextColor = Color.Transparent,
+                    indicatorColor = BrandGreen.copy(alpha = 0.2f)
+                )
             )
         }
     }
 }
+
+
 
 /**
  * Placeholder screen composable for testing navigation

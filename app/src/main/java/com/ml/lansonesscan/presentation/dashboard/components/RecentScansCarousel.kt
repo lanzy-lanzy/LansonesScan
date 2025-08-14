@@ -43,9 +43,9 @@ fun RecentScansCarousel(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Header with "View All" button
+        // Header with minimal styling
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -54,12 +54,15 @@ fun RecentScansCarousel(
             Text(
                 text = "Recent Scans",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Medium
             )
-            
+
             if (recentScans.isNotEmpty()) {
                 TextButton(onClick = onViewAllClick) {
-                    Text("View All")
+                    Text(
+                        text = "View All",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
@@ -94,17 +97,17 @@ private fun RecentScanItem(
 ) {
     Card(
         modifier = modifier
-            .width(160.dp)
+            .width(150.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            // Image thumbnail
+            // Image thumbnail with minimal styling
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(100.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 AsyncImage(
@@ -118,31 +121,31 @@ private fun RecentScanItem(
                     fallback = null,
                     error = null
                 )
-                
+
                 // Fallback icon when image fails to load
                 Icon(
                     imageVector = Icons.Default.Image,
                     contentDescription = "Image placeholder",
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .size(32.dp),
+                        .size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
-                
-                // Status indicator
+
+                // Minimal status indicator
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .padding(6.dp)
                         .background(
                             color = if (scanResult.diseaseDetected) {
                                 MaterialTheme.colorScheme.error
                             } else {
                                 MaterialTheme.colorScheme.primary
                             },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(8.dp)
                         )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = if (scanResult.diseaseDetected) {
@@ -152,15 +155,15 @@ private fun RecentScanItem(
                         },
                         contentDescription = if (scanResult.diseaseDetected) "Disease detected" else "Healthy",
                         tint = Color.White,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(10.dp)
                     )
                 }
             }
             
-            // Scan details
+            // Minimal scan details
             Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 // Analysis type
                 Text(
@@ -169,48 +172,26 @@ private fun RecentScanItem(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
                 )
-                
+
                 // Status
                 Text(
-                    text = if (scanResult.diseaseDetected) {
-                        scanResult.diseaseName ?: "Disease Detected"
-                    } else {
-                        "Healthy"
+                    text = when {
+                        scanResult.analysisType == AnalysisType.NON_LANSONES -> "Non-Lansones"
+                        scanResult.diseaseDetected -> scanResult.diseaseName ?: "Disease Detected"
+                        else -> "Healthy"
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 // Date
                 Text(
                     text = formatDate(scanResult.timestamp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
-                // Confidence level
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Confidence:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${scanResult.getConfidencePercentage()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = when {
-                            scanResult.confidenceLevel >= 0.8f -> MaterialTheme.colorScheme.primary
-                            scanResult.confidenceLevel >= 0.6f -> MaterialTheme.colorScheme.secondary
-                            else -> MaterialTheme.colorScheme.error
-                        }
-                    )
-                }
             }
         }
     }

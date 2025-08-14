@@ -53,7 +53,15 @@ fun AnalysisResults(
     ) {
         DiseaseStatusCard(scanResult = scanResult)
         ConfidenceLevelCard(scanResult = scanResult)
-        RecommendationsCard(recommendations = scanResult.recommendations)
+
+        // Only show recommendations for lansones analysis
+        if (scanResult.analysisType != AnalysisType.NON_LANSONES) {
+            RecommendationsCard(recommendations = scanResult.recommendations)
+        } else {
+            // Show neutral observations for non-lansones items
+            NeutralObservationsCard(scanResult = scanResult)
+        }
+
         ActionButtonsCard(
             onViewDetails = onViewDetails,
             onStartNewScan = onStartNewScan
@@ -69,14 +77,18 @@ private fun DiseaseStatusCard(
     scanResult: ScanResult,
     modifier: Modifier = Modifier
 ) {
-    val (statusColor, statusIcon, statusText) = if (scanResult.diseaseDetected) {
-        Triple(
+    val (statusColor, statusIcon, statusText) = when {
+        scanResult.analysisType == AnalysisType.NON_LANSONES -> Triple(
+            MaterialTheme.colorScheme.primary,
+            Icons.Default.Info,
+            "Non-Lansones Item Detected"
+        )
+        scanResult.diseaseDetected -> Triple(
             MaterialTheme.colorScheme.error,
             Icons.Default.Warning,
             scanResult.diseaseName ?: "Disease Detected"
         )
-    } else {
-        Triple(
+        else -> Triple(
             Color(0xFF4CAF50), // Green
             Icons.Default.CheckCircle,
             "Healthy"
@@ -89,10 +101,10 @@ private fun DiseaseStatusCard(
             .testTag("disease_status_card"),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (scanResult.diseaseDetected) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
+            containerColor = when {
+                scanResult.analysisType == AnalysisType.NON_LANSONES -> MaterialTheme.colorScheme.surfaceVariant
+                scanResult.diseaseDetected -> MaterialTheme.colorScheme.errorContainer
+                else -> MaterialTheme.colorScheme.primaryContainer
             }
         )
     ) {
@@ -173,7 +185,11 @@ private fun ConfidenceLevelCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Confidence Level",
+                    text = if (scanResult.analysisType == AnalysisType.NON_LANSONES) {
+                        "Detection Confidence"
+                    } else {
+                        "Confidence Level"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -362,7 +378,96 @@ private fun ActionButtonsCard(
     }
 }
 
+/**
+ * Card displaying neutral observations for non-lansones items
+ */
+@Composable
+private fun NeutralObservationsCard(
+    scanResult: ScanResult,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("neutral_observations_card"),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Observations",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (scanResult.recommendations.isEmpty()) {
+                Text(
+                    text = "No specific observations available.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("no_observations_text")
+                )
+            } else {
+                scanResult.recommendations.forEachIndexed { index, observation ->
+                    ObservationItem(
+                        observation = observation,
+                        index = index + 1,
+                        modifier = Modifier.testTag("observation_item_$index")
+                    )
+
+                    if (index < scanResult.recommendations.size - 1) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Individual observation item for neutral analysis
+ */
+@Composable
+private fun ObservationItem(
+    observation: String,
+    index: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = "$index.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Text(
+            text = observation,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
 
 @Preview(showBackground = true)
 @Composable
@@ -419,6 +524,40 @@ private fun HealthyAnalysisResultsPreview() {
             )
         )
         
+        AnalysisResults(
+            scanResult = sampleResult,
+            onViewDetails = {},
+            onStartNewScan = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun NeutralAnalysisResultsPreview() {
+    LansonesScanTheme {
+        val sampleResult = ScanResult(
+            id = "3",
+            imagePath = "/path/to/image.jpg",
+            analysisType = AnalysisType.NON_LANSONES,
+            diseaseDetected = false,
+            diseaseName = null,
+            confidenceLevel = 1.0f,
+            recommendations = listOf(
+                "Item appears to be an apple",
+                "Round shape with red coloration",
+                "Smooth surface texture observed",
+                "Approximately 8cm in diameter"
+            ),
+            timestamp = System.currentTimeMillis(),
+            metadata = ScanMetadata(
+                imageSize = 1536000,
+                imageFormat = "png",
+                analysisTime = 980,
+                apiVersion = "1.0"
+            )
+        )
+
         AnalysisResults(
             scanResult = sampleResult,
             onViewDetails = {},

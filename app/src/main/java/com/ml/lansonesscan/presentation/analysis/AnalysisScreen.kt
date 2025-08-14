@@ -34,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.lansonesscan.ui.theme.*
+import com.ml.lansonesscan.ui.components.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -154,6 +156,7 @@ fun AnalysisScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .primaryGradientBackground()
             .testTag("analysis_screen")
     ) {
         Column(
@@ -577,27 +580,13 @@ private fun AnalysisButton(
     onStartAnalysis: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Button(
+    PrimaryGradientButton(
+        text = "Start Analysis",
         onClick = onStartAnalysis,
-        enabled = canStartAnalysis && !isAnalyzing,
-        modifier = modifier
-            .height(56.dp)
-            .testTag("start_analysis_button")
-    ) {
-        if (isAnalyzing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = if (isAnalyzing) "Analyzing..." else "Start Analysis",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
-    }
+        enabled = canStartAnalysis,
+        isLoading = isAnalyzing,
+        modifier = modifier.testTag("start_analysis_button")
+    )
 }
 
 /**

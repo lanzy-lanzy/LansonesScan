@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#FFF8F5F5"
+                android:centerColor="#FFF1F8E9"
+                android:endColor="#FFFFF9C4"
+                android:angle="45"
+                android:type="linear" />
+        </shape>
+    </item>
+    
+    <!-- Centered lansones logo -->
+    <item
+        android:drawable="@drawable/ic_lansones_fruit"
+        android:gravity="center"
+        android:width="120dp"
+        android:height="120dp" />
+</layer-list>

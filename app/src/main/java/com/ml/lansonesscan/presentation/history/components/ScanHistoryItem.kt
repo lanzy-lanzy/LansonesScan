@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -76,17 +77,16 @@ fun ScanHistoryItem(
                     )
                     
                     DiseaseStatusIndicator(
-                        diseaseDetected = scanResult.diseaseDetected,
-                        confidenceLevel = scanResult.confidenceLevel
+                        scanResult = scanResult
                     )
                 }
 
-                // Disease name or healthy status
+                // Disease name or status
                 Text(
-                    text = if (scanResult.diseaseDetected) {
-                        scanResult.diseaseName ?: "Disease Detected"
-                    } else {
-                        "Healthy"
+                    text = when {
+                        scanResult.diseaseDetected -> scanResult.diseaseName ?: "Disease Detected"
+                        scanResult.analysisType == AnalysisType.NON_LANSONES -> "Unknown"
+                        else -> "Healthy"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
@@ -185,6 +185,7 @@ private fun AnalysisTypeChip(
                 text = when (analysisType) {
                     AnalysisType.FRUIT -> "Fruit"
                     AnalysisType.LEAVES -> "Leaves"
+                    AnalysisType.NON_LANSONES -> "General"
                 },
                 style = MaterialTheme.typography.labelSmall
             )
@@ -194,6 +195,7 @@ private fun AnalysisTypeChip(
                 imageVector = when (analysisType) {
                     AnalysisType.FRUIT -> Icons.Default.Eco
                     AnalysisType.LEAVES -> Icons.Default.Eco
+                    AnalysisType.NON_LANSONES -> Icons.Default.Info
                 },
                 contentDescription = null,
                 modifier = Modifier.size(16.dp)
@@ -213,18 +215,21 @@ private fun AnalysisTypeChip(
  */
 @Composable
 private fun DiseaseStatusIndicator(
-    diseaseDetected: Boolean,
-    confidenceLevel: Float,
+    scanResult: ScanResult,
     modifier: Modifier = Modifier
 ) {
-    val (icon, color, text) = if (diseaseDetected) {
-        Triple(
+    val (icon, color, text) = when {
+        scanResult.diseaseDetected -> Triple(
             Icons.Default.Warning,
             MaterialTheme.colorScheme.error,
             "Disease"
         )
-    } else {
-        Triple(
+        scanResult.analysisType == AnalysisType.NON_LANSONES -> Triple(
+            Icons.Default.Info,
+            MaterialTheme.colorScheme.outline,
+            "Unknown"
+        )
+        else -> Triple(
             Icons.Default.Eco,
             Color(0xFF4CAF50), // Green color for healthy
             "Healthy"
@@ -307,6 +312,23 @@ private fun ScanHistoryItemPreview() {
                     recommendations = listOf("Apply fungicide", "Remove affected leaves"),
                     timestamp = System.currentTimeMillis() - 172800000,
                     metadata = ScanMetadata(2048, "PNG", 3000, "1.0")
+                ),
+                onClick = {},
+                onDelete = {}
+            )
+
+            // Non-lansones item scan
+            ScanHistoryItem(
+                scanResult = ScanResult(
+                    id = "3",
+                    imagePath = "",
+                    analysisType = AnalysisType.NON_LANSONES,
+                    diseaseDetected = false,
+                    diseaseName = null,
+                    confidenceLevel = 1.0f,
+                    recommendations = listOf("Round red fruit observed", "Smooth surface texture"),
+                    timestamp = System.currentTimeMillis() - 259200000,
+                    metadata = ScanMetadata(1536, "JPEG", 1500, "1.0")
                 ),
                 onClick = {},
                 onDelete = {}

@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -16,6 +17,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ml.lansonesscan.domain.usecase.GetScanHistoryUseCase
+import com.ml.lansonesscan.ui.theme.*
+import com.ml.lansonesscan.ui.components.GradientCard
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
 
 /**
@@ -26,65 +29,84 @@ fun StatisticsCard(
     statistics: GetScanHistoryUseCase.ScanStatistics,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    GradientCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        gradient = cardGradient(),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header
+            // Header with minimal styling
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Analytics,
                     contentDescription = "Statistics",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = BrandGreen,
+                    modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Scan Statistics",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Medium
                 )
             }
             
             // Statistics Grid
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatisticItem(
-                    icon = Icons.Default.Analytics,
-                    value = statistics.totalScans.toString(),
-                    label = "Total Scans",
-                    modifier = Modifier.weight(1f)
-                )
-                
-                StatisticItem(
-                    icon = Icons.Default.CheckCircle,
-                    value = statistics.healthyScansCount.toString(),
-                    label = "Healthy",
-                    modifier = Modifier.weight(1f),
-                    iconTint = MaterialTheme.colorScheme.primary
-                )
-                
-                StatisticItem(
-                    icon = Icons.Default.Warning,
-                    value = statistics.diseaseDetectedCount.toString(),
-                    label = "Disease Found",
-                    modifier = Modifier.weight(1f),
-                    iconTint = MaterialTheme.colorScheme.error
-                )
+                // First row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatisticItem(
+                        icon = Icons.Default.Analytics,
+                        value = statistics.totalScans.toString(),
+                        label = "Total Scans",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    StatisticItem(
+                        icon = Icons.Default.CheckCircle,
+                        value = statistics.healthyScansCount.toString(),
+                        label = "Healthy",
+                        modifier = Modifier.weight(1f),
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Second row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatisticItem(
+                        icon = Icons.Default.Warning,
+                        value = statistics.diseaseDetectedCount.toString(),
+                        label = "Disease Found",
+                        modifier = Modifier.weight(1f),
+                        iconTint = MaterialTheme.colorScheme.error
+                    )
+
+                    StatisticItem(
+                        icon = Icons.Default.Info,
+                        value = statistics.nonLansonesCount.toString(),
+                        label = "Non-Lansones",
+                        modifier = Modifier.weight(1f),
+                        iconTint = MaterialTheme.colorScheme.outline
+                    )
+                }
             }
             
-            // Detection Rate
+            // Additional info with minimal styling
             if (statistics.totalScans > 0) {
-                Divider()
-                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -92,12 +114,12 @@ fun StatisticsCard(
                 ) {
                     Text(
                         text = "Disease Detection Rate",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = statistics.getFormattedDetectionRate(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = if (statistics.diseaseDetectionRate > 50f) {
                             MaterialTheme.colorScheme.error
@@ -106,7 +128,7 @@ fun StatisticsCard(
                         }
                     )
                 }
-                
+
                 // Storage Info
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,12 +137,12 @@ fun StatisticsCard(
                 ) {
                     Text(
                         text = "Storage Used",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = statistics.getFormattedStorageSize(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -143,18 +165,18 @@ private fun StatisticItem(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = iconTint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(20.dp)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         Text(
@@ -174,7 +196,8 @@ private fun StatisticsCardPreview() {
             statistics = GetScanHistoryUseCase.ScanStatistics(
                 totalScans = 25,
                 diseaseDetectedCount = 8,
-                healthyScansCount = 17,
+                healthyScansCount = 15,
+                nonLansonesCount = 2,
                 totalStorageSize = 1024 * 1024 * 15, // 15 MB
                 diseaseDetectionRate = 32.0f
             ),
@@ -192,6 +215,7 @@ private fun StatisticsCardEmptyPreview() {
                 totalScans = 0,
                 diseaseDetectedCount = 0,
                 healthyScansCount = 0,
+                nonLansonesCount = 0,
                 totalStorageSize = 0,
                 diseaseDetectionRate = 0f
             ),

@@ -9,6 +9,7 @@ class AnalysisTypeTest {
     fun `getDisplayName returns correct display names`() {
         assertEquals("Fruit Analysis", AnalysisType.FRUIT.getDisplayName())
         assertEquals("Leaf Analysis", AnalysisType.LEAVES.getDisplayName())
+        assertEquals("General Analysis", AnalysisType.NON_LANSONES.getDisplayName())
     }
 
     @Test
@@ -35,8 +36,9 @@ class AnalysisTypeTest {
     @Test
     fun `enum values are correct`() {
         val values = AnalysisType.values()
-        assertEquals(2, values.size)
+        assertEquals(3, values.size)
         assertTrue(values.contains(AnalysisType.FRUIT))
         assertTrue(values.contains(AnalysisType.LEAVES))
+        assertTrue(values.contains(AnalysisType.NON_LANSONES))
     }
 }

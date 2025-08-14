@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ml.lansonesscan.ui.theme.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -50,7 +52,9 @@ fun ScanDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .primaryGradientBackground()
     ) {
         // Top App Bar
         TopAppBar(
@@ -111,12 +115,19 @@ fun ScanDetailScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Recommendations
+            // Recommendations or Observations
             if (scanResult.recommendations.isNotEmpty()) {
-                RecommendationsDetailCard(
-                    recommendations = scanResult.recommendations,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (scanResult.analysisType == AnalysisType.NON_LANSONES) {
+                    ObservationsDetailCard(
+                        observations = scanResult.recommendations,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    RecommendationsDetailCard(
+                        recommendations = scanResult.recommendations,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             // Technical Information
@@ -237,17 +248,21 @@ private fun AnalysisSummaryCard(
     scanResult: ScanResult,
     modifier: Modifier = Modifier
 ) {
-    val (statusColor, statusIcon, statusText) = if (scanResult.diseaseDetected) {
-        Triple(
+    val (statusColor, statusIcon, statusText) = when {
+        scanResult.analysisType == AnalysisType.NON_LANSONES -> Triple(
+            MaterialTheme.colorScheme.primary,
+            Icons.Default.Info,
+            "Non-Lansones Item"
+        )
+        scanResult.diseaseDetected -> Triple(
             MaterialTheme.colorScheme.error,
             Icons.Default.Warning,
             scanResult.diseaseName ?: "Disease Detected"
         )
-    } else {
-        Triple(
+        else -> Triple(
             Color(0xFF4CAF50), // Green
             Icons.Default.CheckCircle,
-            "Healthy"
+            "Healthy Lansones"
         )
     }
 
@@ -255,10 +270,10 @@ private fun AnalysisSummaryCard(
         modifier = modifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (scanResult.diseaseDetected) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
+            containerColor = when {
+                scanResult.analysisType == AnalysisType.NON_LANSONES -> MaterialTheme.colorScheme.surfaceVariant
+                scanResult.diseaseDetected -> MaterialTheme.colorScheme.errorContainer
+                else -> MaterialTheme.colorScheme.primaryContainer
             }
         )
     ) {
@@ -361,14 +376,18 @@ private fun DetailedResultsCard(
             )
 
             DetailRow(
-                label = "Disease Status",
-                value = if (scanResult.diseaseDetected) "Disease Detected" else "Healthy"
+                label = if (scanResult.analysisType == AnalysisType.NON_LANSONES) "Item Status" else "Disease Status",
+                value = when {
+                    scanResult.analysisType == AnalysisType.NON_LANSONES -> "Non-Lansones Item"
+                    scanResult.diseaseDetected -> "Disease Detected"
+                    else -> "Healthy Lansones"
+                }
             )
 
-            if (scanResult.diseaseDetected && scanResult.diseaseName != null) {
+            if (scanResult.diseaseDetected && !scanResult.diseaseName.isNullOrBlank()) {
                 DetailRow(
                     label = "Disease Name",
-                    value = scanResult.diseaseName!!
+                    value = scanResult.diseaseName
                 )
             }
 
@@ -449,6 +468,77 @@ private fun RecommendationsDetailCard(
                 }
                 
                 if (index < recommendations.size - 1) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Card displaying observations for non-lansones items
+ */
+@Composable
+private fun ObservationsDetailCard(
+    observations: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = "Observations",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Observations",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            observations.forEachIndexed { index, observation ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${index + 1}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = observation,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (index < observations.size - 1) {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }

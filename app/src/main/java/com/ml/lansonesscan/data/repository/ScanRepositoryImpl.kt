@@ -58,7 +58,6 @@ class ScanRepositoryImpl(
                 val startTime = System.currentTimeMillis()
                 val analysisResult = analysisService.analyzeImage(
                     imageUri = imageUri,
-                    analysisType = analysisType,
                     getImageBytes = { getImageBytesFromUri(it) },
                     getMimeType = { getMimeTypeFromUri(it) }
                 )
@@ -88,10 +87,10 @@ class ScanRepositoryImpl(
                     apiVersion = API_VERSION
                 )
                 
-                // Create scan result
+                // Create scan result using the detected analysis type
                 val scanResult = ScanResult.create(
                     imagePath = savedImagePath,
-                    analysisType = analysisType,
+                    analysisType = analysis.detectedAnalysisType,
                     diseaseDetected = analysis.diseaseDetected,
                     diseaseName = analysis.diseaseName,
                     confidenceLevel = analysis.confidenceLevel,
@@ -264,9 +263,20 @@ class ScanRepositoryImpl(
     override suspend fun getHealthyScansCount(): Int {
         return withContext(Dispatchers.IO) {
             try {
-                scanDao.getHealthyScansCount()
+                scanDao.getHealthyLansonesScansCount()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to get healthy scans count", e)
+                0
+            }
+        }
+    }
+
+    override suspend fun getNonLansonesCount(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                scanDao.getNonLansonesCount()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get non-lansones count", e)
                 0
             }
         }

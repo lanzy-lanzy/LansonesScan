@@ -56,16 +56,16 @@ class AnalysisService(
         
         // Leaf analysis prompt optimized for lansones leaf diseases
         private val LEAF_ANALYSIS_PROMPT = """
-            You are an expert agricultural pathologist specializing in lansones (Lansium domesticum) leaf diseases and plant health. 
+            You are an expert agricultural pathologist specializing in lansones (Lansium domesticum) leaf diseases and plant health.
             Analyze this lansones leaf image and provide a detailed assessment.
-            
+
             Focus on identifying:
             1. Leaf diseases (leaf spots, blights, fungal infections, bacterial diseases)
             2. Pest damage (insect feeding, mite damage, scale insects)
             3. Nutrient deficiencies (yellowing patterns, chlorosis, necrosis)
             4. Environmental stress indicators
             5. Overall plant health status
-            
+
             Provide your response in the following JSON format:
             {
                 "diseaseDetected": boolean,
@@ -77,24 +77,70 @@ class AnalysisService(
                 "severity": "low|medium|high|none",
                 "leafHealthStatus": "healthy|stressed|diseased|severely_damaged"
             }
-            
+
             Be specific about lansones-related leaf issues such as:
             - Leaf spot diseases (Cercospora, Phyllosticta)
             - Powdery mildew
             - Bacterial leaf blight
             - Scale insect infestations
             - Nutrient deficiency symptoms (nitrogen, potassium, magnesium)
-            
+
             If no disease is detected, still provide recommendations for preventive care and optimal growing conditions.
+        """.trimIndent()
+
+        // Initial detection prompt to determine if the image contains lansones
+        private val DETECTION_PROMPT = """
+            Analyze this image to determine what type of item is shown.
+
+            First, determine if this image contains lansones (Lansium domesticum) fruit or leaves:
+            - Lansones fruits are small, round, yellow-brown tropical fruits that grow in clusters
+            - Lansones leaves are compound, oval-shaped with prominent veins
+
+            Provide your response in the following JSON format:
+            {
+                "isLansones": boolean,
+                "itemType": "lansones_fruit|lansones_leaves|other",
+                "confidence": float (0.0 to 1.0),
+                "description": "brief factual description of what is visible in the image"
+            }
+
+            Be accurate in your identification. Only classify as lansones if you are confident it matches the botanical characteristics.
+        """.trimIndent()
+
+        // Neutral analysis prompt for non-lansones items
+        private val NEUTRAL_ANALYSIS_PROMPT = """
+            Analyze this image and provide only factual, objective observations without any recommendations, evaluations, or assessments.
+
+            Focus on providing:
+            1. Technical specifications and measurable properties
+            2. Observable characteristics and features
+            3. Quantitative metrics where applicable
+            4. Factual descriptions of what is detected
+
+            Provide your response in the following JSON format:
+            {
+                "diseaseDetected": false,
+                "diseaseName": null,
+                "confidenceLevel": 1.0,
+                "affectedPart": "general",
+                "symptoms": [],
+                "recommendations": [],
+                "severity": "none",
+                "observations": ["list of factual observations"],
+                "measurements": ["list of measurable properties"],
+                "characteristics": ["list of observable features"]
+            }
+
+            IMPORTANT: Do not include any subjective judgments, health assessments, safety evaluations, or recommendations.
+            Only report factual data and observable characteristics.
         """.trimIndent()
     }
     
     /**
-     * Analyzes a lansones image for diseases and health issues
+     * Analyzes an image, first detecting if it contains lansones, then applying appropriate analysis
      */
     suspend fun analyzeImage(
         imageUri: Uri,
-        analysisType: AnalysisType,
         getImageBytes: suspend (Uri) -> ByteArray,
         getMimeType: (Uri) -> String
     ): Result<AnalysisResult> {
@@ -103,46 +149,45 @@ class AnalysisService(
                 // Get image data
                 val imageBytes = getImageBytes(imageUri)
                 val mimeType = getMimeType(imageUri)
-                
+
                 // Validate image data
                 if (imageBytes.isEmpty()) {
                     return@withContext Result.failure(
                         AnalysisException("Image data is empty")
                     )
                 }
-                
-                // Select appropriate prompt based on analysis type
-                val prompt = when (analysisType) {
-                    AnalysisType.FRUIT -> FRUIT_ANALYSIS_PROMPT
-                    AnalysisType.LEAVES -> LEAF_ANALYSIS_PROMPT
+
+                // First, detect if the image contains lansones
+                val detectionResult = detectLansonesInImage(imageBytes, mimeType)
+                if (detectionResult.isFailure) {
+                    return@withContext detectionResult.map {
+                        // Fallback to neutral analysis if detection fails
+                        createNeutralAnalysisResult("Detection failed, providing neutral analysis")
+                    }
                 }
-                
-                // Create API request
-                val request = requestBuilder.createImageAnalysisRequest(
-                    imageBytes = imageBytes,
-                    mimeType = mimeType,
-                    prompt = prompt
-                )
-                
-                // Make API call
-                val apiResult = apiClient.analyzeImage(request)
-                
-                if (apiResult.isFailure) {
-                    return@withContext Result.failure(
-                        AnalysisException(
-                            "API call failed: ${apiResult.exceptionOrNull()?.message}",
-                            apiResult.exceptionOrNull()
-                        )
-                    )
+
+                val detection = detectionResult.getOrNull()!!
+
+                // Determine the actual analysis type based on detection
+                val actualAnalysisType = if (detection.isLansones) {
+                    when (detection.itemType) {
+                        "lansones_fruit" -> AnalysisType.FRUIT
+                        "lansones_leaves" -> AnalysisType.LEAVES
+                        else -> AnalysisType.NON_LANSONES
+                    }
+                } else {
+                    AnalysisType.NON_LANSONES
                 }
-                
-                val geminiResponse = apiResult.getOrNull()!!
-                
-                // Parse response
-                val analysisResult = parseGeminiResponse(geminiResponse, analysisType)
-                
+
+                // Perform appropriate analysis
+                val analysisResult = when (actualAnalysisType) {
+                    AnalysisType.FRUIT -> performLansonesAnalysis(imageBytes, mimeType, FRUIT_ANALYSIS_PROMPT, actualAnalysisType)
+                    AnalysisType.LEAVES -> performLansonesAnalysis(imageBytes, mimeType, LEAF_ANALYSIS_PROMPT, actualAnalysisType)
+                    AnalysisType.NON_LANSONES -> performNeutralAnalysis(imageBytes, mimeType, detection.description)
+                }
+
                 Result.success(analysisResult)
-                
+
             } catch (e: Exception) {
                 Result.failure(
                     AnalysisException(
@@ -153,7 +198,104 @@ class AnalysisService(
             }
         }
     }
-    
+
+    /**
+     * Detects if the image contains lansones fruit or leaves
+     */
+    private suspend fun detectLansonesInImage(
+        imageBytes: ByteArray,
+        mimeType: String
+    ): Result<DetectionResult> {
+        return try {
+            val request = requestBuilder.createImageAnalysisRequest(
+                imageBytes = imageBytes,
+                mimeType = mimeType,
+                prompt = DETECTION_PROMPT
+            )
+
+            val apiResult = apiClient.analyzeImage(request)
+            if (apiResult.isFailure) {
+                return Result.failure(
+                    AnalysisException("Detection API call failed: ${apiResult.exceptionOrNull()?.message}")
+                )
+            }
+
+            val response = apiResult.getOrNull()!!
+            val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                ?: return Result.failure(AnalysisException("Empty detection response"))
+
+            val detection = parseDetectionResponse(responseText)
+            Result.success(detection)
+        } catch (e: Exception) {
+            Result.failure(AnalysisException("Detection failed: ${e.message}", e))
+        }
+    }
+
+    /**
+     * Performs lansones-specific analysis
+     */
+    private suspend fun performLansonesAnalysis(
+        imageBytes: ByteArray,
+        mimeType: String,
+        prompt: String,
+        analysisType: AnalysisType
+    ): AnalysisResult {
+        val request = requestBuilder.createImageAnalysisRequest(
+            imageBytes = imageBytes,
+            mimeType = mimeType,
+            prompt = prompt
+        )
+
+        val apiResult = apiClient.analyzeImage(request)
+        if (apiResult.isFailure) {
+            throw AnalysisException("Lansones analysis API call failed: ${apiResult.exceptionOrNull()?.message}")
+        }
+
+        val response = apiResult.getOrNull()!!
+        return parseGeminiResponse(response, analysisType)
+    }
+
+    /**
+     * Performs neutral analysis for non-lansones items
+     */
+    private suspend fun performNeutralAnalysis(
+        imageBytes: ByteArray,
+        mimeType: String,
+        itemDescription: String
+    ): AnalysisResult {
+        val request = requestBuilder.createImageAnalysisRequest(
+            imageBytes = imageBytes,
+            mimeType = mimeType,
+            prompt = NEUTRAL_ANALYSIS_PROMPT
+        )
+
+        val apiResult = apiClient.analyzeImage(request)
+        if (apiResult.isFailure) {
+            // Fallback to basic neutral result if API fails
+            return createNeutralAnalysisResult(itemDescription)
+        }
+
+        val response = apiResult.getOrNull()!!
+        return parseNeutralResponse(response, itemDescription)
+    }
+
+    /**
+     * Creates a basic neutral analysis result
+     */
+    private fun createNeutralAnalysisResult(description: String): AnalysisResult {
+        return AnalysisResult(
+            diseaseDetected = false,
+            diseaseName = null,
+            confidenceLevel = 1.0f,
+            affectedPart = "general",
+            symptoms = emptyList(),
+            recommendations = emptyList(),
+            severity = "none",
+            rawResponse = "Neutral analysis: $description",
+            detectedAnalysisType = AnalysisType.NON_LANSONES
+        )
+    }
+
     /**
      * Parses Gemini API response into structured analysis result
      */
@@ -199,7 +341,8 @@ class AnalysisService(
                 symptoms = jsonResponse.symptoms ?: emptyList(),
                 recommendations = jsonResponse.recommendations ?: emptyList(),
                 severity = jsonResponse.severity ?: "medium",
-                rawResponse = responseText
+                rawResponse = responseText,
+                detectedAnalysisType = analysisType
             )
         } catch (e: JsonSyntaxException) {
             // If JSON parsing fails, throw exception to trigger fallback
@@ -263,7 +406,8 @@ class AnalysisService(
             symptoms = symptoms,
             recommendations = recommendations,
             severity = severity,
-            rawResponse = responseText
+            rawResponse = responseText,
+            detectedAnalysisType = analysisType
         )
     }
     
@@ -384,7 +528,7 @@ class AnalysisService(
         
         return recommendations
     }
-    
+
     /**
      * Determines severity level from text indicators
      */
@@ -395,6 +539,54 @@ class AnalysisService(
             text.contains("mild") || text.contains("slight") || text.contains("minor") -> "low"
             text.contains("healthy") || text.contains("no disease") || text.contains("normal") -> "none"
             else -> "medium" // Default to medium if unclear
+        }
+    }
+
+    /**
+     * Parses detection response from Gemini API
+     */
+    private fun parseDetectionResponse(responseText: String): DetectionResult {
+        return try {
+            val jsonText = extractJsonFromText(responseText)
+            gson.fromJson(jsonText, DetectionResult::class.java)
+        } catch (e: Exception) {
+            // Fallback to text-based detection
+            val isLansones = responseText.lowercase().let { text ->
+                text.contains("lansones") || text.contains("lansium domesticum")
+            }
+            DetectionResult(
+                isLansones = isLansones,
+                itemType = if (isLansones) "lansones_fruit" else "other",
+                confidence = 0.5f,
+                description = "Item detected in image"
+            )
+        }
+    }
+
+    /**
+     * Parses neutral analysis response for non-lansones items
+     */
+    private fun parseNeutralResponse(response: GeminiResponse, itemDescription: String): AnalysisResult {
+        val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            ?: return createNeutralAnalysisResult(itemDescription)
+
+        return try {
+            val jsonText = extractJsonFromText(responseText)
+            val neutralResponse = gson.fromJson(jsonText, NeutralAnalysisResponse::class.java)
+
+            AnalysisResult(
+                diseaseDetected = false,
+                diseaseName = null,
+                confidenceLevel = 1.0f,
+                affectedPart = "general",
+                symptoms = neutralResponse.observations ?: emptyList(),
+                recommendations = emptyList(), // No recommendations for non-lansones items
+                severity = "none",
+                rawResponse = responseText,
+                detectedAnalysisType = AnalysisType.NON_LANSONES
+            )
+        } catch (e: Exception) {
+            createNeutralAnalysisResult(itemDescription)
         }
     }
 }
@@ -410,7 +602,8 @@ data class AnalysisResult(
     val symptoms: List<String>,
     val recommendations: List<String>,
     val severity: String,
-    val rawResponse: String
+    val rawResponse: String,
+    val detectedAnalysisType: AnalysisType = AnalysisType.FRUIT // Default for backward compatibility
 )
 
 /**
@@ -426,6 +619,32 @@ data class JsonAnalysisResponse(
     val severity: String?,
     val ripenessLevel: String? = null, // For fruit analysis
     val leafHealthStatus: String? = null // For leaf analysis
+)
+
+/**
+ * Data class for detection results
+ */
+data class DetectionResult(
+    val isLansones: Boolean,
+    val itemType: String,
+    val confidence: Float,
+    val description: String
+)
+
+/**
+ * Data class for neutral analysis responses
+ */
+data class NeutralAnalysisResponse(
+    val diseaseDetected: Boolean = false,
+    val diseaseName: String? = null,
+    val confidenceLevel: Float = 1.0f,
+    val affectedPart: String = "general",
+    val symptoms: List<String>? = null,
+    val recommendations: List<String>? = null,
+    val severity: String = "none",
+    val observations: List<String>? = null,
+    val measurements: List<String>? = null,
+    val characteristics: List<String>? = null
 )
 
 /**

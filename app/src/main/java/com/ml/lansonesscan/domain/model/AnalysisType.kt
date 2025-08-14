@@ -5,7 +5,8 @@ package com.ml.lansonesscan.domain.model
  */
 enum class AnalysisType {
     FRUIT,
-    LEAVES;
+    LEAVES,
+    NON_LANSONES;
 
     /**
      * Returns a human-readable display name for the analysis type
@@ -14,6 +15,7 @@ enum class AnalysisType {
         return when (this) {
             FRUIT -> "Fruit Analysis"
             LEAVES -> "Leaf Analysis"
+            NON_LANSONES -> "General Analysis"
         }
     }
 
@@ -24,6 +26,7 @@ enum class AnalysisType {
         return when (this) {
             FRUIT -> "Analyzes fruit surface for diseases, ripeness, and quality issues"
             LEAVES -> "Analyzes leaves for diseases, pest damage, and nutrient deficiencies"
+            NON_LANSONES -> "Provides factual analysis of non-lansones items"
         }
     }
 

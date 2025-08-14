@@ -95,13 +95,15 @@ class GetScanHistoryUseCase(
     suspend fun getScanStatistics(): ScanStatistics {
         val totalScans = scanRepository.getScanCount()
         val diseaseDetectedCount = scanRepository.getDiseaseDetectedCount()
+        val nonLansonesCount = scanRepository.getNonLansonesCount()
         val healthyScansCount = scanRepository.getHealthyScansCount()
         val totalStorageSize = scanRepository.getTotalStorageSize()
-        
+
         return ScanStatistics(
             totalScans = totalScans,
             diseaseDetectedCount = diseaseDetectedCount,
             healthyScansCount = healthyScansCount,
+            nonLansonesCount = nonLansonesCount,
             totalStorageSize = totalStorageSize,
             diseaseDetectionRate = if (totalScans > 0) {
                 (diseaseDetectedCount.toFloat() / totalScans.toFloat()) * 100f
@@ -153,6 +155,7 @@ class GetScanHistoryUseCase(
         val totalScans: Int,
         val diseaseDetectedCount: Int,
         val healthyScansCount: Int,
+        val nonLansonesCount: Int,
         val totalStorageSize: Long,
         val diseaseDetectionRate: Float
     ) {

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Error
@@ -609,8 +610,43 @@ private fun AnalysisProgress(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Animated spinner with pulsing effect
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.CenterHorizontally),
+                contentAlignment = Alignment.Center
+            ) {
+                // Outer pulsing circle
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(64.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    strokeWidth = 0.5.dp
+                )
+                
+                // Main spinner
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(48.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 3.dp
+                )
+                
+                // Center icon
+                Icon(
+                    imageVector = Icons.Default.AutoFixHigh,
+                    contentDescription = "Analyzing",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -635,7 +671,8 @@ private fun AnalysisProgress(
                 progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("progress_indicator"),
+                    .testTag("progress_indicator")
+                    .height(6.dp),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
@@ -644,8 +681,42 @@ private fun AnalysisProgress(
                 text = status,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.testTag("progress_status")
+                modifier = Modifier.testTag("progress_status"),
+                textAlign = TextAlign.Center
             )
+            
+            // Additional status details
+            if (status.contains("Preparing")) {
+                Text(
+                    text = "Optimizing image for analysis...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            } else if (status.contains("Analyzing")) {
+                Text(
+                    text = "Processing image with AI models...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            } else if (status.contains("Saving")) {
+                Text(
+                    text = "Storing results securely...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            } else if (status.contains("complete")) {
+                Text(
+                    text = "Finalizing results...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }

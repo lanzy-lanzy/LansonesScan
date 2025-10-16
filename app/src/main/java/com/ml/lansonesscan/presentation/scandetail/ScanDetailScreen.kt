@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import com.ml.lansonesscan.domain.model.ScanMetadata
 import com.ml.lansonesscan.domain.model.ScanResult
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
@@ -108,6 +109,15 @@ fun ScanDetailScreen(
                 scanResult = scanResult,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Variety Information (for fruit analysis)
+            if (scanResult.analysisType == AnalysisType.FRUIT && scanResult.variety != null && scanResult.variety != LansonesVariety.UNKNOWN) {
+                VarietyDetailCard(
+                    variety = scanResult.variety,
+                    confidenceLevel = scanResult.varietyConfidence ?: 0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Detailed Results
             DetailedResultsCard(
@@ -341,6 +351,88 @@ private fun AnalysisSummaryCard(
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = statusColor,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Card displaying variety information for fruit analysis
+ */
+@Composable
+private fun VarietyDetailCard(
+    variety: LansonesVariety,
+    confidenceLevel: Float,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Variety Information",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    text = "Variety Information",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            DetailRow(
+                label = "Detected Variety",
+                value = variety.getDisplayName()
+            )
+
+            Text(
+                text = variety.getDescription(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Variety Confidence",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "${(confidenceLevel * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                
+                LinearProgressIndicator(
+                    progress = { confidenceLevel },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
@@ -676,6 +768,38 @@ private fun ScanDetailScreenPreview() {
                 analysisTime = 1250,
                 apiVersion = "1.0"
             )
+        )
+        
+        ScanDetailScreen(
+            scanResult = sampleResult,
+            onNavigateBack = {},
+            onShareResult = {},
+            onDeleteScan = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ScanDetailScreenWithVarietyPreview() {
+    LansonesScanTheme {
+        val sampleResult = ScanResult(
+            id = "scan_456",
+            imagePath = "",
+            analysisType = AnalysisType.FRUIT,
+            diseaseDetected = false,
+            diseaseName = null,
+            confidenceLevel = 0.95f,
+            recommendations = listOf("Plant appears healthy"),
+            timestamp = System.currentTimeMillis(),
+            metadata = ScanMetadata(
+                imageSize = 1536000,
+                imageFormat = "png",
+                analysisTime = 980,
+                apiVersion = "1.0"
+            ),
+            variety = LansonesVariety.LONGKONG,
+            varietyConfidence = 0.92f
         )
         
         ScanDetailScreen(

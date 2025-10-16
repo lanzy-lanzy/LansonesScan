@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import com.ml.lansonesscan.domain.model.ScanMetadata
 import com.ml.lansonesscan.domain.model.ScanResult
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
@@ -81,11 +82,14 @@ fun ScanHistoryItem(
                     )
                 }
 
-                // Disease name or status
+                // Disease name, variety, or status
                 Text(
                     text = when {
                         scanResult.diseaseDetected -> scanResult.diseaseName ?: "Disease Detected"
                         scanResult.analysisType == AnalysisType.NON_LANSONES -> "Unknown"
+                        scanResult.analysisType == AnalysisType.FRUIT && scanResult.variety != null && scanResult.variety != LansonesVariety.UNKNOWN -> {
+                            scanResult.variety.getDisplayName()
+                        }
                         else -> "Healthy"
                     },
                     style = MaterialTheme.typography.titleMedium,
@@ -229,6 +233,11 @@ private fun DiseaseStatusIndicator(
             MaterialTheme.colorScheme.outline,
             "Unknown"
         )
+        scanResult.analysisType == AnalysisType.FRUIT && scanResult.variety != null && scanResult.variety != LansonesVariety.UNKNOWN -> Triple(
+            Icons.Default.Info,
+            MaterialTheme.colorScheme.primary,
+            "Variety"
+        )
         else -> Triple(
             Icons.Default.Eco,
             Color(0xFF4CAF50), // Green color for healthy
@@ -329,6 +338,25 @@ private fun ScanHistoryItemPreview() {
                     recommendations = listOf("Round red fruit observed", "Smooth surface texture"),
                     timestamp = System.currentTimeMillis() - 259200000,
                     metadata = ScanMetadata(1536, "JPEG", 1500, "1.0")
+                ),
+                onClick = {},
+                onDelete = {}
+            )
+            
+            // Fruit with variety detection
+            ScanHistoryItem(
+                scanResult = ScanResult(
+                    id = "4",
+                    imagePath = "",
+                    analysisType = AnalysisType.FRUIT,
+                    diseaseDetected = false,
+                    diseaseName = null,
+                    confidenceLevel = 0.95f,
+                    recommendations = listOf("Plant appears healthy"),
+                    timestamp = System.currentTimeMillis() - 345600000,
+                    metadata = ScanMetadata(2048, "JPEG", 2500, "1.0"),
+                    variety = LansonesVariety.LONGKONG,
+                    varietyConfidence = 0.95f
                 ),
                 onClick = {},
                 onDelete = {}

@@ -7,6 +7,7 @@ import com.ml.lansonesscan.data.remote.api.GeminiApiClient
 import com.ml.lansonesscan.data.remote.api.GeminiRequestBuilder
 import com.ml.lansonesscan.data.remote.dto.GeminiResponse
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -86,6 +87,36 @@ class AnalysisService(
             - Nutrient deficiency symptoms (nitrogen, potassium, magnesium)
 
             If no disease is detected, still provide recommendations for preventive care and optimal growing conditions.
+        """.trimIndent()
+
+        // Variety detection prompt for identifying lansones varieties
+        private val VARIETY_DETECTION_PROMPT = """
+            You are an expert in lansones (Lansium domesticum) varieties and botany.
+            Analyze this lansones fruit image and identify the specific variety.
+
+            Focus on identifying distinguishing characteristics such as:
+            1. Size and shape of the fruit
+            2. Texture and color of the skin
+            3. Arrangement and appearance of the scales
+            4. Flesh characteristics (color, texture, juiciness)
+            5. Seed size and number
+
+            Known varieties of lansones include:
+            - Longkong: Sweet, juicy variety with thick, rough skin and prominent scales
+            - Duku: Sweet and slightly tangy variety with thin, smooth skin
+            - Paete: Small to medium-sized fruit with very sweet, translucent flesh
+            - Jolo: Large fruit with thick, rough skin and sweet, aromatic flesh
+
+            Provide your response in the following JSON format:
+            {
+                "variety": "longkong|duku|paete|jolo|unknown",
+                "confidenceLevel": float (0.0 to 1.0),
+                "characteristics": ["list of observed distinguishing features"],
+                "description": "brief description of why this variety was identified"
+            }
+
+            If you cannot confidently identify the variety, respond with "unknown" for the variety field.
+            Be accurate in your identification and only classify with high confidence.
         """.trimIndent()
 
         // Initial detection prompt to determine if the image contains lansones
@@ -232,7 +263,7 @@ class AnalysisService(
     }
 
     /**
-     * Performs lansones-specific analysis
+     * Performs lansones-specific analysis with automatic variety detection
      */
     private suspend fun performLansonesAnalysis(
         imageBytes: ByteArray,
@@ -240,6 +271,7 @@ class AnalysisService(
         prompt: String,
         analysisType: AnalysisType
     ): AnalysisResult {
+        // First, perform the main analysis (disease detection)
         val request = requestBuilder.createImageAnalysisRequest(
             imageBytes = imageBytes,
             mimeType = mimeType,
@@ -252,7 +284,67 @@ class AnalysisService(
         }
 
         val response = apiResult.getOrNull()!!
-        return parseGeminiResponse(response, analysisType)
+        val mainAnalysisResult = parseGeminiResponse(response, analysisType)
+        
+        // Then, automatically detect the variety for lansones fruit
+        var varietyResult: VarietyAnalysisResult? = null
+        if (analysisType == AnalysisType.FRUIT) {
+            varietyResult = detectLansonesVariety(imageBytes, mimeType)
+        }
+
+        return AnalysisResult(
+            diseaseDetected = mainAnalysisResult.diseaseDetected,
+            diseaseName = mainAnalysisResult.diseaseName,
+            confidenceLevel = mainAnalysisResult.confidenceLevel,
+            affectedPart = mainAnalysisResult.affectedPart,
+            symptoms = mainAnalysisResult.symptoms,
+            recommendations = mainAnalysisResult.recommendations,
+            severity = mainAnalysisResult.severity,
+            rawResponse = mainAnalysisResult.rawResponse,
+            detectedAnalysisType = mainAnalysisResult.detectedAnalysisType,
+            varietyResult = varietyResult
+        )
+    }
+
+    /**
+     * Automatically detects the variety of lansones fruit
+     */
+    private suspend fun detectLansonesVariety(
+        imageBytes: ByteArray,
+        mimeType: String
+    ): VarietyAnalysisResult? {
+        return try {
+            val request = requestBuilder.createImageAnalysisRequest(
+                imageBytes = imageBytes,
+                mimeType = mimeType,
+                prompt = VARIETY_DETECTION_PROMPT
+            )
+
+            val apiResult = apiClient.analyzeImage(request)
+            if (apiResult.isFailure) {
+                // Don't fail the entire analysis if variety detection fails
+                return null
+            }
+
+            val response = apiResult.getOrNull()!!
+            val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                ?: return null
+
+            // Extract JSON from response text if it's embedded in markdown or other text
+            val jsonText = extractJsonFromText(responseText)
+            
+            val varietyResponse = gson.fromJson(jsonText, VarietyAnalysisResponse::class.java)
+            
+            VarietyAnalysisResult(
+                variety = varietyResponse.variety?.let { LansonesVariety.fromString(it) } ?: LansonesVariety.UNKNOWN,
+                confidenceLevel = varietyResponse.confidenceLevel,
+                characteristics = varietyResponse.characteristics ?: emptyList(),
+                description = varietyResponse.description ?: ""
+            )
+        } catch (e: Exception) {
+            // Don't fail the entire analysis if variety detection fails
+            null
+        }
     }
 
     /**
@@ -603,7 +695,18 @@ data class AnalysisResult(
     val recommendations: List<String>,
     val severity: String,
     val rawResponse: String,
-    val detectedAnalysisType: AnalysisType = AnalysisType.FRUIT // Default for backward compatibility
+    val detectedAnalysisType: AnalysisType = AnalysisType.FRUIT, // Default for backward compatibility
+    val varietyResult: VarietyAnalysisResult? = null
+)
+
+/**
+ * Data class for variety analysis results
+ */
+data class VarietyAnalysisResult(
+    val variety: LansonesVariety,
+    val confidenceLevel: Float,
+    val characteristics: List<String>,
+    val description: String
 )
 
 /**
@@ -619,6 +722,16 @@ data class JsonAnalysisResponse(
     val severity: String?,
     val ripenessLevel: String? = null, // For fruit analysis
     val leafHealthStatus: String? = null // For leaf analysis
+)
+
+/**
+ * Data class for variety analysis responses
+ */
+data class VarietyAnalysisResponse(
+    val variety: String?,
+    val confidenceLevel: Float,
+    val characteristics: List<String>?,
+    val description: String?
 )
 
 /**

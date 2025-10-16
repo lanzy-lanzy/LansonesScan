@@ -14,7 +14,9 @@ data class ScanResult(
     val confidenceLevel: Float,
     val recommendations: List<String>,
     val timestamp: Long,
-    val metadata: ScanMetadata
+    val metadata: ScanMetadata,
+    val variety: LansonesVariety? = null,
+    val varietyConfidence: Float? = null
 ) {
     init {
         require(id.isNotBlank()) { "ID cannot be blank" }
@@ -100,7 +102,9 @@ data class ScanResult(
             diseaseName: String?,
             confidenceLevel: Float,
             recommendations: List<String>,
-            metadata: ScanMetadata
+            metadata: ScanMetadata,
+            variety: LansonesVariety? = null,
+            varietyConfidence: Float? = null
         ): ScanResult {
             return ScanResult(
                 id = UUID.randomUUID().toString(),
@@ -111,7 +115,9 @@ data class ScanResult(
                 confidenceLevel = confidenceLevel,
                 recommendations = recommendations,
                 timestamp = System.currentTimeMillis(),
-                metadata = metadata
+                metadata = metadata,
+                variety = variety,
+                varietyConfidence = varietyConfidence
             )
         }
 
@@ -122,7 +128,9 @@ data class ScanResult(
             imagePath: String,
             analysisType: AnalysisType,
             confidenceLevel: Float,
-            metadata: ScanMetadata
+            metadata: ScanMetadata,
+            variety: LansonesVariety? = null,
+            varietyConfidence: Float? = null
         ): ScanResult {
             return create(
                 imagePath = imagePath,
@@ -131,7 +139,9 @@ data class ScanResult(
                 diseaseName = null,
                 confidenceLevel = confidenceLevel,
                 recommendations = listOf("Plant appears healthy. Continue regular care."),
-                metadata = metadata
+                metadata = metadata,
+                variety = variety,
+                varietyConfidence = varietyConfidence
             )
         }
 
@@ -144,7 +154,9 @@ data class ScanResult(
             diseaseName: String,
             confidenceLevel: Float,
             recommendations: List<String>,
-            metadata: ScanMetadata
+            metadata: ScanMetadata,
+            variety: LansonesVariety? = null,
+            varietyConfidence: Float? = null
         ): ScanResult {
             return create(
                 imagePath = imagePath,
@@ -153,7 +165,9 @@ data class ScanResult(
                 diseaseName = diseaseName,
                 confidenceLevel = confidenceLevel,
                 recommendations = recommendations,
-                metadata = metadata
+                metadata = metadata,
+                variety = variety,
+                varietyConfidence = varietyConfidence
             )
         }
     }
@@ -183,6 +197,50 @@ enum class SeverityLevel {
             LOW -> "#FFC107" // Amber
             MEDIUM -> "#FF9800" // Orange
             HIGH -> "#F44336" // Red
+        }
+    }
+}
+
+/**
+ * Enum representing different varieties of Lansones
+ */
+enum class LansonesVariety {
+    LONGKONG,
+    DUKU,
+    PAETE,
+    JOLO,
+    UNKNOWN;
+
+    fun getDisplayName(): String {
+        return when (this) {
+            LONGKONG -> "Longkong"
+            DUKU -> "Duku"
+            PAETE -> "Paete"
+            JOLO -> "Jolo"
+            UNKNOWN -> "Unknown"
+        }
+    }
+
+    fun getDescription(): String {
+        return when (this) {
+            LONGKONG -> "Sweet, juicy variety with thick skin, popular in Thailand"
+            DUKU -> "Sweet and slightly tangy variety with thin, smooth skin"
+            PAETE -> "Small to medium-sized fruit with very sweet, translucent flesh"
+            JOLO -> "Large fruit with thick, rough skin and sweet, aromatic flesh"
+            UNKNOWN -> "Unable to determine the specific variety"
+        }
+    }
+
+    companion object {
+        /**
+         * Safely converts a string to LansonesVariety, returns UNKNOWN if invalid
+         */
+        fun fromString(value: String?): LansonesVariety {
+            return try {
+                value?.let { valueOf(it.uppercase()) } ?: UNKNOWN
+            } catch (e: IllegalArgumentException) {
+                UNKNOWN
+            }
         }
     }
 }

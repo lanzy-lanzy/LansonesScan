@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import com.ml.lansonesscan.domain.model.ScanMetadata
 import com.ml.lansonesscan.domain.model.ScanResult
 import com.ml.lansonesscan.ui.theme.LansonesScanTheme
@@ -52,6 +53,15 @@ fun AnalysisResults(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DiseaseStatusCard(scanResult = scanResult)
+        
+        // Show variety information for lansones fruit analysis
+        if (scanResult.analysisType == AnalysisType.FRUIT && scanResult.variety != null && scanResult.variety != LansonesVariety.UNKNOWN) {
+            VarietyCard(
+                variety = scanResult.variety,
+                confidenceLevel = scanResult.varietyConfidence ?: 0f
+            )
+        }
+        
         ConfidenceLevelCard(scanResult = scanResult)
 
         // Only show recommendations for lansones analysis
@@ -147,6 +157,106 @@ private fun DiseaseStatusCard(
 }
 
 /**
+ * Card displaying the detected lansones variety
+ */
+@Composable
+private fun VarietyCard(
+    variety: LansonesVariety,
+    confidenceLevel: Float,
+    modifier: Modifier = Modifier
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = confidenceLevel,
+        animationSpec = tween(durationMillis = 1000, easing = EaseOutCubic),
+        label = "variety_confidence_animation"
+    )
+    
+    val confidenceColor = when {
+        confidenceLevel >= 0.8f -> Color(0xFF4CAF50) // Green
+        confidenceLevel >= 0.6f -> Color(0xFFFF9800) // Orange
+        else -> MaterialTheme.colorScheme.error // Red
+    }
+    
+    val confidencePercentage = (confidenceLevel * 100).toInt()
+    
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("variety_card"),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Detected Variety",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                
+                Text(
+                    text = variety.getDisplayName(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = variety.getDescription(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Identification Confidence",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Text(
+                    text = "$confidencePercentage%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = confidenceColor
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .testTag("variety_confidence_progress"),
+                color = confidenceColor,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
+    }
+}
+
+/**
  * Card displaying the confidence level with animated progress bar
  */
 @Composable
@@ -154,6 +264,16 @@ private fun ConfidenceLevelCard(
     scanResult: ScanResult,
     modifier: Modifier = Modifier
 ) {
+    // Skip confidence card for variety analysis since we show it in the variety card
+    if (scanResult.analysisType == AnalysisType.FRUIT && scanResult.variety != null && scanResult.variety != LansonesVariety.UNKNOWN) {
+        // For fruit analysis with variety detection, we still show the disease confidence
+        if (scanResult.diseaseDetected || !scanResult.diseaseDetected) {
+            // Always show disease confidence for fruit analysis
+        } else {
+            return
+        }
+    }
+    
     val animatedProgress by animateFloatAsState(
         targetValue = scanResult.confidenceLevel,
         animationSpec = tween(durationMillis = 1000, easing = EaseOutCubic),
@@ -188,7 +308,7 @@ private fun ConfidenceLevelCard(
                     text = if (scanResult.analysisType == AnalysisType.NON_LANSONES) {
                         "Detection Confidence"
                     } else {
-                        "Confidence Level"
+                        "Disease Detection Confidence"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
@@ -524,6 +644,37 @@ private fun HealthyAnalysisResultsPreview() {
             )
         )
         
+        AnalysisResults(
+            scanResult = sampleResult,
+            onViewDetails = {},
+            onStartNewScan = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun VarietyAnalysisResultsPreview() {
+    LansonesScanTheme {
+        val sampleResult = ScanResult(
+            id = "4",
+            imagePath = "/path/to/image.jpg",
+            analysisType = AnalysisType.FRUIT,
+            diseaseDetected = false,
+            diseaseName = null,
+            confidenceLevel = 0.92f,
+            recommendations = listOf("Plant appears healthy"),
+            timestamp = System.currentTimeMillis(),
+            metadata = ScanMetadata(
+                imageSize = 1536000,
+                imageFormat = "png",
+                analysisTime = 980,
+                apiVersion = "1.0"
+            ),
+            variety = LansonesVariety.LONGKONG,
+            varietyConfidence = 0.95f
+        )
+
         AnalysisResults(
             scanResult = sampleResult,
             onViewDetails = {},

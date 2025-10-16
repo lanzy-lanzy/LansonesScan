@@ -23,7 +23,7 @@ class GeminiApiClient {
         private const val TAG = "GeminiApiClient"
         private const val BASE_URL = "https://generativelanguage.googleapis.com"
         private const val API_VERSION = "v1beta"
-        private const val MODEL_NAME = "gemini-1.5-flash"
+        private const val MODEL_NAME = "gemini-2.5-flash"
         private const val TIMEOUT_SECONDS = 60L
         
         // Content types

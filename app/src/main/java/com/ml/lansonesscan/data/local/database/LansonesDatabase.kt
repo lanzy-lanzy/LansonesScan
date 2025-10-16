@@ -15,7 +15,7 @@ import com.ml.lansonesscan.data.local.entities.ScanResultEntity
  */
 @Database(
     entities = [ScanResultEntity::class],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(com.ml.lansonesscan.data.local.database.Converters::class)
@@ -30,12 +30,22 @@ abstract class LansonesDatabase : RoomDatabase() {
         private const val DATABASE_NAME = "lansones_database"
 
         /**
-         * Migration from version 1 to 2 (example for future use)
+         * Migration from version 1 to 2 - add variety column
          */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Example migration - add new column
-                // database.execSQL("ALTER TABLE scan_results ADD COLUMN new_column TEXT")
+                // Add variety column to scan_results table
+                database.execSQL("ALTER TABLE scan_results ADD COLUMN variety TEXT")
+            }
+        }
+
+        /**
+         * Migration from version 2 to 3 - add varietyConfidence column
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add varietyConfidence column to scan_results table
+                database.execSQL("ALTER TABLE scan_results ADD COLUMN varietyConfidence REAL")
             }
         }
 
@@ -46,7 +56,7 @@ abstract class LansonesDatabase : RoomDatabase() {
                     LansonesDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration() // For development only
                     .build()
                 INSTANCE = instance

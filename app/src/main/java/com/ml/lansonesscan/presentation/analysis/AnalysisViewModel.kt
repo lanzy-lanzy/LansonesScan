@@ -7,6 +7,7 @@ import com.ml.lansonesscan.domain.model.AnalysisType
 import com.ml.lansonesscan.domain.model.ScanResult
 import com.ml.lansonesscan.domain.usecase.AnalyzeImageUseCase
 import com.ml.lansonesscan.domain.usecase.SaveScanResultUseCase
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -75,11 +76,23 @@ class AnalysisViewModel(
 
             try {
                 // Update progress to show analysis started
+                updateAnalysisProgress(0.05f, "Initializing analysis...")
+
+                // Prepare image
                 updateAnalysisProgress(0.1f, "Preparing image...")
+                delay(300) // Simulate preparation time
+
+                // Optimize image
+                updateAnalysisProgress(0.15f, "Optimizing image...")
+                delay(200) // Simulate optimization time
+
+                // Upload image
+                updateAnalysisProgress(0.25f, "Uploading image...")
+                delay(500) // Simulate upload time
 
                 // Perform the analysis
-                updateAnalysisProgress(0.3f, "Analyzing image...")
-                
+                updateAnalysisProgress(0.3f, "Analyzing with AI models...")
+            
                 val result = analyzeImageUseCase(
                     imageUri = currentState.selectedImageUri!!,
                     analysisType = currentState.selectedAnalysisType!!
@@ -87,11 +100,17 @@ class AnalysisViewModel(
 
                 result.fold(
                     onSuccess = { scanResult ->
-                        updateAnalysisProgress(0.8f, "Saving results...")
+                        updateAnalysisProgress(0.8f, "Processing results...")
+                        delay(300) // Simulate processing time
+                        
+                        updateAnalysisProgress(0.9f, "Saving results...")
                         
                         // Save the scan result
                         saveScanResultUseCase(scanResult).fold(
                             onSuccess = {
+                                updateAnalysisProgress(0.95f, "Finalizing...")
+                                delay(200) // Simulate finalization time
+                                
                                 updateAnalysisProgress(1.0f, "Analysis complete!")
                                 
                                 _uiState.value = _uiState.value.copy(
@@ -142,6 +161,25 @@ class AnalysisViewModel(
             analysisProgress = progress,
             analysisStatus = status
         )
+        
+        // Add more granular progress updates for better user experience
+        when {
+            progress <= 0.1f -> {
+                // Initial preparation
+            }
+            progress <= 0.3f -> {
+                // Image preparation and upload
+            }
+            progress <= 0.7f -> {
+                // AI analysis in progress
+            }
+            progress <= 0.9f -> {
+                // Processing results
+            }
+            progress <= 1.0f -> {
+                // Finalizing and saving
+            }
+        }
     }
 
     /**

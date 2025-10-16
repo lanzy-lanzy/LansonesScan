@@ -7,7 +7,9 @@ import com.ml.lansonesscan.data.local.dao.ScanDao
 import com.ml.lansonesscan.data.local.entities.ScanResultEntity
 import com.ml.lansonesscan.data.local.storage.ImageStorageManager
 import com.ml.lansonesscan.data.remote.service.AnalysisService
+import com.ml.lansonesscan.data.remote.service.VarietyAnalysisResult
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import com.ml.lansonesscan.domain.model.ScanMetadata
 import com.ml.lansonesscan.domain.model.ScanResult
 import com.ml.lansonesscan.domain.repository.ScanRepository
@@ -87,6 +89,13 @@ class ScanRepositoryImpl(
                     apiVersion = API_VERSION
                 )
                 
+                // Extract variety information if available
+                val (variety, varietyConfidence) = if (analysis.varietyResult != null) {
+                    analysis.varietyResult.variety to analysis.varietyResult.confidenceLevel
+                } else {
+                    null to null
+                }
+                
                 // Create scan result using the detected analysis type
                 val scanResult = ScanResult.create(
                     imagePath = savedImagePath,
@@ -95,7 +104,9 @@ class ScanRepositoryImpl(
                     diseaseName = analysis.diseaseName,
                     confidenceLevel = analysis.confidenceLevel,
                     recommendations = analysis.recommendations,
-                    metadata = metadata
+                    metadata = metadata,
+                    variety = variety,
+                    varietyConfidence = varietyConfidence
                 )
                 
                 // Save to database
@@ -347,6 +358,13 @@ class ScanRepositoryImpl(
                         appendLine("Disease Detected: ${if (scan.diseaseDetected) "Yes" else "No"}")
                         if (scan.diseaseDetected && scan.diseaseName != null) {
                             appendLine("Disease Name: ${scan.diseaseName}")
+                        }
+                        // Add variety information if available
+                        if (domainScan.variety != null && domainScan.variety != LansonesVariety.UNKNOWN) {
+                            appendLine("Variety: ${domainScan.variety.getDisplayName()}")
+                            if (domainScan.varietyConfidence != null) {
+                                appendLine("Variety Confidence: ${(domainScan.varietyConfidence * 100).toInt()}%")
+                            }
                         }
                         appendLine("Confidence: ${domainScan.getConfidencePercentage()}%")
                         appendLine("Recommendations:")

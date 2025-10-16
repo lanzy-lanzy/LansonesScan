@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Index
 import com.ml.lansonesscan.domain.model.AnalysisType
+import com.ml.lansonesscan.domain.model.LansonesVariety
 import com.ml.lansonesscan.domain.model.ScanMetadata
 import com.ml.lansonesscan.domain.model.ScanResult
 
@@ -31,7 +32,9 @@ data class ScanResultEntity(
     val imageSize: Long,
     val imageFormat: String,
     val analysisTime: Long,
-    val apiVersion: String
+    val apiVersion: String,
+    val variety: String? = null,
+    val varietyConfidence: Float? = null
 ) {
     /**
      * Convert entity to domain model
@@ -51,7 +54,9 @@ data class ScanResultEntity(
                 imageFormat = imageFormat,
                 analysisTime = analysisTime,
                 apiVersion = apiVersion
-            )
+            ),
+            variety = variety?.let { LansonesVariety.fromString(it) },
+            varietyConfidence = varietyConfidence
         )
     }
     
@@ -72,7 +77,9 @@ data class ScanResultEntity(
                 imageSize = scanResult.metadata.imageSize,
                 imageFormat = scanResult.metadata.imageFormat,
                 analysisTime = scanResult.metadata.analysisTime,
-                apiVersion = scanResult.metadata.apiVersion
+                apiVersion = scanResult.metadata.apiVersion,
+                variety = scanResult.variety?.name,
+                varietyConfidence = scanResult.varietyConfidence
             )
         }
     }

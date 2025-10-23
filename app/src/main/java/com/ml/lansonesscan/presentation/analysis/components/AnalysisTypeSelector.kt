@@ -156,6 +156,17 @@ private fun AnalysisTypeCard(
                 lineHeight = MaterialTheme.typography.bodySmall.lineHeight
             )
             
+            // Add leaf-specific note
+            if (analysisType == AnalysisType.LEAVES) {
+                Text(
+                    text = "Detects leaf spots, pests, and nutrient issues",
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            
             // Selection indicator
             if (isSelected) {
                 Row(

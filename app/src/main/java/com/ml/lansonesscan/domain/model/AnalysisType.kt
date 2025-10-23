@@ -25,7 +25,7 @@ enum class AnalysisType {
     fun getDescription(): String {
         return when (this) {
             FRUIT -> "Analyzes fruit surface for diseases, ripeness, and quality issues"
-            LEAVES -> "Analyzes leaves for diseases, pest damage, and nutrient deficiencies"
+            LEAVES -> "Analyzes leaves for diseases, pest damage, nutrient deficiencies, and environmental stress"
             NON_LANSONES -> "Provides factual analysis of non-lansones items"
         }
     }

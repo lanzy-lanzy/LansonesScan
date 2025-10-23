@@ -421,7 +421,7 @@ private fun AnalysisHeader() {
             modifier = Modifier.testTag("analysis_title")
         )
         Text(
-            text = "Capture or upload an image to analyze your lansones for diseases",
+            text = "Capture or upload an image to analyze your lansones fruit or leaves for diseases",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testTag("analysis_subtitle")
@@ -452,6 +452,15 @@ private fun ImageSelectionSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.testTag("image_source_title")
+        )
+        
+        Text(
+            text = "Choose fruit or leaf image for analysis",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .testTag("image_source_subtitle")
+                .padding(bottom = 8.dp)
         )
 
         Row(

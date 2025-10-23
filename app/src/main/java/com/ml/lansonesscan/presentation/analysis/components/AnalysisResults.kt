@@ -96,12 +96,16 @@ private fun DiseaseStatusCard(
         scanResult.diseaseDetected -> Triple(
             MaterialTheme.colorScheme.error,
             Icons.Default.Warning,
-            scanResult.diseaseName ?: "Disease Detected"
+            if (scanResult.analysisType == AnalysisType.LEAVES) {
+                "${scanResult.diseaseName ?: "Leaf Disease"} Detected"
+            } else {
+                scanResult.diseaseName ?: "Disease Detected"
+            }
         )
         else -> Triple(
             Color(0xFF4CAF50), // Green
             Icons.Default.CheckCircle,
-            "Healthy"
+            if (scanResult.analysisType == AnalysisType.LEAVES) "Leaves Healthy" else "Healthy"
         )
     }
     
@@ -147,7 +151,10 @@ private fun DiseaseStatusCard(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = scanResult.analysisType.getDisplayName(),
+                text = when (scanResult.analysisType) {
+                    AnalysisType.LEAVES -> "${scanResult.analysisType.getDisplayName()} - ${scanResult.getStatusText().substringAfter("(").substringBefore(")")}"
+                    else -> scanResult.analysisType.getDisplayName()
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag("analysis_type_text")

@@ -80,11 +80,24 @@ class AnalysisService(
             }
 
             Be specific about lansones-related leaf issues such as:
-            - Leaf spot diseases (Cercospora, Phyllosticta)
-            - Powdery mildew
+            - Leaf spot diseases (Cercospora, Phyllosticta, Septoria)
+            - Powdery mildew (Oidium lansium)
+            - Downy mildew
             - Bacterial leaf blight
+            - Anthracnose leaf spots
             - Scale insect infestations
-            - Nutrient deficiency symptoms (nitrogen, potassium, magnesium)
+            - Mealybug infestations
+            - Spider mite damage
+            - Thrips damage
+            - Nutrient deficiency symptoms (nitrogen, potassium, magnesium, iron)
+            - Environmental stress (sunburn, wind damage, frost damage)
+
+            Common lansones leaf diseases and their characteristics:
+            - Cercospora Leaf Spot: Small, circular brown spots with gray centers
+            - Phyllosticta Leaf Spot: Irregular brown spots with dark margins
+            - Powdery Mildew: White, powdery fungal growth on leaf surfaces
+            - Bacterial Leaf Blight: Water-soaked lesions that turn brown
+            - Anthracnose: Large, irregular brown spots often along leaf margins
 
             If no disease is detected, still provide recommendations for preventive care and optimal growing conditions.
         """.trimIndent()
@@ -544,9 +557,16 @@ class AnalysisService(
             "bacterial soft rot",
             "leaf spot",
             "powdery mildew",
+            "downy mildew",
             "bacterial leaf blight",
             "cercospora",
-            "phyllosticta"
+            "phyllosticta",
+            "septoria",
+            "oidium",
+            "scale insects",
+            "mealybugs",
+            "spider mites",
+            "thrips"
         )
         
         return diseasePatterns.find { disease ->
@@ -579,7 +599,13 @@ class AnalysisService(
             "yellowing" to listOf("yellow", "yellowing", "chlorosis"),
             "wilting" to listOf("wilt", "wilting", "drooping"),
             "fungal growth" to listOf("fungal", "mold", "mildew"),
-            "bacterial infection" to listOf("bacterial", "soft rot", "oozing")
+            "bacterial infection" to listOf("bacterial", "soft rot", "oozing"),
+            "powdery coating" to listOf("powdery", "white coating"),
+            "webbing" to listOf("webbing", "spider web"),
+            "sticky residue" to listOf("sticky", "honeydew"),
+            "small insects" to listOf("insects", "bugs", "pests"),
+            "necrotic areas" to listOf("necrotic", "dead tissue"),
+            "distorted growth" to listOf("distorted", "deformed")
         )
         
         val lowerText = text.lowercase()
@@ -607,6 +633,9 @@ class AnalysisService(
             lowerText.contains("spray") -> recommendations.add("Apply recommended spray treatment")
             lowerText.contains("drainage") -> recommendations.add("Improve drainage around the plant")
             lowerText.contains("ventilation") -> recommendations.add("Ensure proper air circulation")
+            lowerText.contains("pruning") -> recommendations.add("Prune affected leaves to improve air circulation")
+            lowerText.contains("fertilizer") || lowerText.contains("nutrient") -> recommendations.add("Apply appropriate fertilizer to address nutrient deficiencies")
+            lowerText.contains("watering") -> recommendations.add("Adjust watering practices to prevent waterlogging")
         }
         
         // Default recommendations if none found
@@ -615,6 +644,15 @@ class AnalysisService(
                 "Monitor plant health regularly",
                 "Maintain proper growing conditions",
                 "Consult with agricultural extension services if symptoms persist"
+            ))
+        }
+        
+        // Add leaf-specific general recommendations
+        if (lowerText.contains("leaf") || lowerText.contains("foliage")) {
+            recommendations.addAll(listOf(
+                "Ensure proper spacing between plants for air circulation",
+                "Water at the base of the plant to keep foliage dry",
+                "Apply mulch to maintain soil moisture and temperature"
             ))
         }
         

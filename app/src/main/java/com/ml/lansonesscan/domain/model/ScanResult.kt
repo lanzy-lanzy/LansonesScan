@@ -43,10 +43,16 @@ data class ScanResult(
      * Returns a human-readable status string
      */
     fun getStatusText(): String {
-        return if (diseaseDetected) {
+        val baseStatus = if (diseaseDetected) {
             "Disease Detected: $diseaseName"
         } else {
             "Healthy"
+        }
+        
+        return when (analysisType) {
+            AnalysisType.LEAVES -> "$baseStatus (Leaf Analysis)"
+            AnalysisType.FRUIT -> "$baseStatus (Fruit Analysis)"
+            AnalysisType.NON_LANSONES -> "Non-Lansones Item"
         }
     }
 

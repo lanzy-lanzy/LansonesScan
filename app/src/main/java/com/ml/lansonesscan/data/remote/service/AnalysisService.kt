@@ -52,6 +52,14 @@ class AnalysisService(
             - Bacterial soft rot
             - Post-harvest decay
             
+            IMPORTANT FORMATTING RULES:
+            - Write all recommendations in formal, professional language
+            - Do NOT use asterisks, bullet points, or markdown formatting in the text
+            - Use complete sentences with proper punctuation
+            - Write recommendations as clear, actionable statements
+            - Avoid informal language or conversational tone
+            - Each recommendation should be a standalone sentence
+            
             If no disease is detected, still provide recommendations for proper handling and storage.
         """.trimIndent()
         
@@ -59,6 +67,9 @@ class AnalysisService(
         private val LEAF_ANALYSIS_PROMPT = """
             You are an expert agricultural pathologist specializing in lansones (Lansium domesticum) leaf diseases and plant health.
             Analyze this lansones leaf image and provide a detailed assessment.
+            
+            IMPORTANT: Lansones has COMPOUND PINNATE LEAVES with 5-7 leaflets per leaf. Each leaflet is oblong to elliptic, 
+            9-21 cm long, with smooth margins and prominent veins. Healthy leaves are dark green and glossy.
 
             Focus on identifying:
             1. Leaf diseases (leaf spots, blights, fungal infections, bacterial diseases)
@@ -80,26 +91,58 @@ class AnalysisService(
             }
 
             Be specific about lansones-related leaf issues such as:
-            - Leaf spot diseases (Cercospora, Phyllosticta, Septoria)
-            - Powdery mildew (Oidium lansium)
-            - Downy mildew
-            - Bacterial leaf blight
-            - Anthracnose leaf spots
-            - Scale insect infestations
-            - Mealybug infestations
-            - Spider mite damage
-            - Thrips damage
-            - Nutrient deficiency symptoms (nitrogen, potassium, magnesium, iron)
-            - Environmental stress (sunburn, wind damage, frost damage)
+            
+            FUNGAL DISEASES:
+            - Cercospora Leaf Spot: Small, circular brown spots (2-5mm) with gray centers and dark brown margins
+            - Phyllosticta Leaf Spot: Irregular brown spots with dark purple margins, may have tiny black dots (pycnidia)
+            - Powdery Mildew (Oidium lansium): White, powdery fungal growth on upper leaf surfaces
+            - Downy Mildew: Yellow patches on upper surface with grayish-white growth underneath
+            - Anthracnose: Large, irregular brown to black spots, often along leaf margins or tips, may cause leaf curling
+            
+            BACTERIAL DISEASES:
+            - Bacterial Leaf Blight: Water-soaked lesions that turn brown or black, may have yellow halos
+            - Bacterial Leaf Spot: Small, dark brown to black spots with yellow halos
+            
+            PEST DAMAGE:
+            - Scale Insects: Small, round, brown or white bumps on leaf surfaces, sticky honeydew present
+            - Mealybugs: White, cottony masses on leaves, sticky honeydew, leaf yellowing
+            - Spider Mites: Fine webbing, stippling (tiny yellow dots), leaf bronzing or yellowing
+            - Thrips: Silver streaks, distorted leaves, black fecal spots
+            - Leaf Miners: Serpentine tunnels or blotches between leaf surfaces
+            - Caterpillars: Irregular holes, chewed leaf margins
+            
+            NUTRIENT DEFICIENCIES:
+            - Nitrogen: Uniform yellowing of older leaves, stunted growth
+            - Potassium: Yellowing and browning of leaf margins (leaf scorch), older leaves affected first
+            - Magnesium: Interveinal chlorosis (yellowing between veins) on older leaves
+            - Iron: Interveinal chlorosis on young leaves, veins remain green
+            - Manganese: Interveinal chlorosis with small necrotic spots
+            
+            ENVIRONMENTAL STRESS:
+            - Sunburn: Bleached or brown patches on leaf surfaces exposed to direct sun
+            - Wind Damage: Torn or tattered leaves, brown edges
+            - Water Stress: Wilting, leaf curling, brown tips
+            - Cold Damage: Blackened or water-soaked areas, especially on young growth
 
-            Common lansones leaf diseases and their characteristics:
-            - Cercospora Leaf Spot: Small, circular brown spots with gray centers
-            - Phyllosticta Leaf Spot: Irregular brown spots with dark margins
-            - Powdery Mildew: White, powdery fungal growth on leaf surfaces
-            - Bacterial Leaf Blight: Water-soaked lesions that turn brown
-            - Anthracnose: Large, irregular brown spots often along leaf margins
+            ANALYSIS GUIDELINES:
+            - Examine leaf color, texture, and any discoloration patterns
+            - Look for spots, lesions, or abnormal growths
+            - Check for signs of insects or their damage (holes, stippling, webbing)
+            - Assess overall leaf vigor and appearance
+            - Consider the distribution of symptoms (localized vs. widespread)
+            - Note if symptoms appear on older leaves, younger leaves, or both
+
+            IMPORTANT FORMATTING RULES:
+            - Write all recommendations in formal, professional language
+            - Do NOT use asterisks, bullet points, or markdown formatting in the text
+            - Use complete sentences with proper punctuation
+            - Write recommendations as clear, actionable statements
+            - Avoid informal language or conversational tone
+            - Each recommendation should be a standalone sentence
+            - Do not use bold, italic, or any text decorations
 
             If no disease is detected, still provide recommendations for preventive care and optimal growing conditions.
+            Always provide specific, actionable recommendations based on the observed symptoms.
         """.trimIndent()
 
         // Variety detection prompt for identifying lansones varieties
@@ -128,6 +171,12 @@ class AnalysisService(
                 "description": "brief description of why this variety was identified"
             }
 
+            IMPORTANT FORMATTING RULES:
+            - Write all text in formal, professional language
+            - Do NOT use asterisks, bullet points, or markdown formatting
+            - Use complete sentences with proper punctuation
+            - Avoid informal language or conversational tone
+
             If you cannot confidently identify the variety, respond with "unknown" for the variety field.
             Be accurate in your identification and only classify with high confidence.
         """.trimIndent()
@@ -137,8 +186,28 @@ class AnalysisService(
             Analyze this image to determine what type of item is shown.
 
             First, determine if this image contains lansones (Lansium domesticum) fruit or leaves:
-            - Lansones fruits are small, round, yellow-brown tropical fruits that grow in clusters
-            - Lansones leaves are compound, oval-shaped with prominent veins
+            
+            LANSONES FRUIT CHARACTERISTICS:
+            - Small, round to oval tropical fruits, typically 2-4 cm in diameter
+            - Yellow-brown to tan colored skin when ripe
+            - Grow in clusters (racemes) hanging from branches
+            - Thin, leathery skin with a slightly rough texture
+            - May have small scales or bumps on the surface
+            - Translucent white flesh visible if cut open
+            
+            LANSONES LEAF CHARACTERISTICS:
+            - Compound pinnate leaves (multiple leaflets arranged along a central stem)
+            - Each leaf typically has 5-7 leaflets (sometimes up to 9)
+            - Leaflets are oblong to elliptic in shape, 9-21 cm long and 5-10 cm wide
+            - Leaflets have prominent midribs and lateral veins
+            - Leaf surface is smooth and glossy, dark green on top, lighter green underneath
+            - Leaflets are arranged alternately or opposite along the rachis (leaf stem)
+            - Leaf margins are entire (smooth, not serrated)
+            - New leaves may have a reddish or bronze tint
+            - Leaves grow in an alternate arrangement on branches
+            
+            IMPORTANT: Lansones leaves are COMPOUND leaves with multiple leaflets, not simple single leaves.
+            Look for the characteristic pinnate arrangement with 5-7 oval leaflets per leaf.
 
             Provide your response in the following JSON format:
             {
@@ -148,7 +217,14 @@ class AnalysisService(
                 "description": "brief factual description of what is visible in the image"
             }
 
-            Be accurate in your identification. Only classify as lansones if you are confident it matches the botanical characteristics.
+            IMPORTANT FORMATTING RULES:
+            - Write all text in formal, professional language
+            - Do NOT use asterisks, bullet points, or markdown formatting
+            - Use complete sentences with proper punctuation
+            - Avoid informal language or conversational tone
+
+            Be accurate in your identification. Only classify as lansones if you are confident it matches the botanical characteristics described above.
+            If you see compound leaves with 5-7 oval leaflets arranged along a central stem, it is likely lansones leaves.
         """.trimIndent()
 
         // Neutral analysis prompt for non-lansones items
@@ -175,8 +251,13 @@ class AnalysisService(
                 "characteristics": ["list of observable features"]
             }
 
-            IMPORTANT: Do not include any subjective judgments, health assessments, safety evaluations, or recommendations.
-            Only report factual data and observable characteristics.
+            IMPORTANT FORMATTING RULES:
+            - Write all text in formal, professional language
+            - Do NOT use asterisks, bullet points, or markdown formatting
+            - Use complete sentences with proper punctuation
+            - Avoid informal language or conversational tone
+            - Do not include any subjective judgments, health assessments, safety evaluations, or recommendations
+            - Only report factual data and observable characteristics
         """.trimIndent()
     }
     
@@ -681,12 +762,23 @@ class AnalysisService(
             gson.fromJson(jsonText, DetectionResult::class.java)
         } catch (e: Exception) {
             // Fallback to text-based detection
-            val isLansones = responseText.lowercase().let { text ->
-                text.contains("lansones") || text.contains("lansium domesticum")
+            val lowerText = responseText.lowercase()
+            val isLansones = lowerText.contains("lansones") || lowerText.contains("lansium domesticum")
+            
+            // Determine if it's leaves or fruit based on keywords
+            val itemType = when {
+                !isLansones -> "other"
+                lowerText.contains("leaf") || lowerText.contains("leaves") || 
+                lowerText.contains("foliage") || lowerText.contains("leaflet") ||
+                lowerText.contains("compound") || lowerText.contains("pinnate") -> "lansones_leaves"
+                lowerText.contains("fruit") || lowerText.contains("berry") || 
+                lowerText.contains("cluster") -> "lansones_fruit"
+                else -> "lansones_fruit" // Default to fruit if unclear
             }
+            
             DetectionResult(
                 isLansones = isLansones,
-                itemType = if (isLansones) "lansones_fruit" else "other",
+                itemType = itemType,
                 confidence = 0.5f,
                 description = "Item detected in image"
             )

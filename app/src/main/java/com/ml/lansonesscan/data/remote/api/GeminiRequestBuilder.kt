@@ -12,20 +12,20 @@ class GeminiRequestBuilder(
 ) {
     
     companion object {
-        // Safety settings to allow medical/health content analysis
+        // Minimal safety settings - matching your working tomato app approach
         private val DEFAULT_SAFETY_SETTINGS = listOf(
-            SafetySetting("HARM_CATEGORY_HARASSMENT", "BLOCK_NONE"),
-            SafetySetting("HARM_CATEGORY_HATE_SPEECH", "BLOCK_NONE"),
-            SafetySetting("HARM_CATEGORY_SEXUALLY_EXPLICIT", "BLOCK_NONE"),
-            SafetySetting("HARM_CATEGORY_DANGEROUS_CONTENT", "BLOCK_NONE")
+            SafetySetting("HARM_CATEGORY_HARASSMENT", "BLOCK_ONLY_HIGH"),
+            SafetySetting("HARM_CATEGORY_HATE_SPEECH", "BLOCK_ONLY_HIGH"),
+            SafetySetting("HARM_CATEGORY_SEXUALLY_EXPLICIT", "BLOCK_ONLY_HIGH"),
+            SafetySetting("HARM_CATEGORY_DANGEROUS_CONTENT", "BLOCK_ONLY_HIGH")
         )
         
-        // Generation config for consistent responses
+        // Optimized for speed and consistency - similar to your tomato app
         private val DEFAULT_GENERATION_CONFIG = GenerationConfig(
-            temperature = 0.1f,
-            topK = 32,
-            topP = 1.0f,
-            maxOutputTokens = 2048
+            temperature = 0.15f,  // Low for deterministic, consistent results
+            topK = 1,             // Most focused sampling
+            topP = 0.8f,          // Balanced probability
+            maxOutputTokens = 2048  // Enough for comprehensive analysis
         )
     }
     

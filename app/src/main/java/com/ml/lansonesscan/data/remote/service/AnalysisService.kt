@@ -1,268 +1,172 @@
 package com.ml.lansonesscan.data.remote.service
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.ml.lansonesscan.data.remote.api.GeminiApiClient
-import com.ml.lansonesscan.data.remote.api.GeminiRequestBuilder
-import com.ml.lansonesscan.data.remote.dto.GeminiResponse
+import android.util.Log
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
+import com.ml.lansonesscan.data.cache.AnalysisCache
+import com.ml.lansonesscan.data.remote.api.GeminiSdkClient
 import com.ml.lansonesscan.domain.model.AnalysisType
 import com.ml.lansonesscan.domain.model.LansonesVariety
+import com.ml.lansonesscan.util.ImagePreprocessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Service for analyzing lansones images using Gemini API with specialized prompts
+ * Service for analyzing lansones images using Gemini SDK (fast approach)
+ * Based on TomatoScan implementation with caching for consistent results
+ * Includes caching to return same results for identical images
  */
+import com.ml.lansonesscan.data.cache.PreprocessedBitmapCache
+
 class AnalysisService(
-    private val apiClient: GeminiApiClient,
-    private val requestBuilder: GeminiRequestBuilder,
-    private val gson: Gson = Gson()
+    private val sdkClient: GeminiSdkClient,
+    private val json: Json = Json { ignoreUnknownKeys = true },
+    private val cache: AnalysisCache = AnalysisCache(),
+    private val preprocessedBitmapCache: PreprocessedBitmapCache = PreprocessedBitmapCache()
 ) {
     
     companion object {
         private const val TAG = "AnalysisService"
         
+        // Performance tracking
+        private var totalAnalyses = 0
+        private var cacheHits = 0
+        
+        fun getPerformanceStats(): String {
+            val hitRate = if (totalAnalyses > 0) (cacheHits * 100.0 / totalAnalyses) else 0.0
+            return "Analyses: $totalAnalyses, Cache hits: $cacheHits (${String.format("%.1f", hitRate)}%)"
+        }
+        
+        // Initial detection prompt to determine if the image contains lansones
+        private val DETECTION_PROMPT = """
+            You are an expert botanist specializing in lansones (Lansium domesticum). 
+            Analyze the provided image and determine if it contains lansones fruit or leaves.
+            
+            Lansones characteristics:
+            - Fruit: Small, round, yellow-brown tropical fruits that grow in clusters
+            - Leaves: Compound pinnate leaves with 5-7 leaflets (this is a key identifying feature)
+            
+            IMPORTANT: Respond ONLY with a valid JSON object in this exact format, no other text:
+            {
+                "isLansones": boolean,
+                "itemType": "lansones_fruit|lansones_leaves|other",
+                "confidence": float,
+                "description": "string"
+            }
+            
+            Key identification points:
+            - If you see a compound leaf with 5-7 leaflets, it is definitely lansones leaves
+            - If you see small, round, yellow-brown fruits in clusters, it is lansones fruit
+            - If you're unsure or it doesn't match these characteristics, classify as "other"
+            
+            Be conservative in your classification - only classify as lansones if you are confident.
+        """.trimIndent()
+        
         // Fruit analysis prompt optimized for lansones fruit disease detection
         private val FRUIT_ANALYSIS_PROMPT = """
-            You are an expert agricultural pathologist specializing in lansones (Lansium domesticum) fruit diseases. 
-            Analyze this lansones fruit image and provide a detailed assessment.
-            
-            Focus on identifying:
-            1. Disease symptoms (black spots, brown patches, fungal growth, bacterial infections)
-            2. ripeness level and quality indicators
-            3. Physical damage or defects
-            4. Overall fruit health status
-            
-            Provide your response in the following JSON format:
+            Expert agricultural pathologist specializing in lansones fruit diseases.
+            Analyze the provided image of lansones fruit for diseases, ripeness, and defects.
+
+            IMPORTANT: Respond ONLY with a valid JSON object in this exact format, no other text:
             {
                 "diseaseDetected": boolean,
-                "diseaseName": "string or null",
-                "confidenceLevel": float (0.0 to 1.0),
-                "affectedPart": "fruit",
-                "symptoms": ["list of observed symptoms"],
-                "recommendations": ["list of actionable recommendations"],
+                "diseaseName": "string",
+                "confidenceLevel": float,
+                "symptoms": ["string"],
+                "recommendations": ["string"],
                 "severity": "low|medium|high|none",
                 "ripenessLevel": "unripe|ripe|overripe|unknown"
             }
-            
-            Be specific about lansones-related diseases such as:
-            - Anthracnose (Colletotrichum gloeosporioides)
-            - Fruit rot diseases
-            - Bacterial soft rot
-            - Post-harvest decay
-            
-            IMPORTANT FORMATTING RULES:
-            - Write all recommendations in formal, professional language
-            - Do NOT use asterisks, bullet points, or markdown formatting in the text
-            - Use complete sentences with proper punctuation
-            - Write recommendations as clear, actionable statements
-            - Avoid informal language or conversational tone
-            - Each recommendation should be a standalone sentence
-            
-            If no disease is detected, still provide recommendations for proper handling and storage.
+
+            CRITICAL RULES - MUST FOLLOW:
+            1. If diseaseDetected is true, diseaseName MUST be a non-empty string (NEVER null, NEVER empty string "")
+            2. If diseaseDetected is false, diseaseName should be "None" or "Healthy"
+            3. Use specific disease names when possible: Anthracnose, Fruit Rot, Bacterial Soft Rot, Blight, etc.
+            4. If unsure of exact disease but disease is present, use "Unidentified Disease" or "Unknown Fungal Infection"
+            5. confidenceLevel must be between 0.0 and 1.0
+            6. NEVER return null for diseaseName field
+
+            Focus on lansones-specific diseases like Anthracnose, fruit rot, and bacterial soft rot.
+            Provide formal, professional recommendations in complete sentences.
+            If no disease is detected, provide handling and storage recommendations.
         """.trimIndent()
         
         // Leaf analysis prompt optimized for lansones leaf diseases
         private val LEAF_ANALYSIS_PROMPT = """
-            You are an expert agricultural pathologist specializing in lansones (Lansium domesticum) leaf diseases and plant health.
-            Analyze this lansones leaf image and provide a detailed assessment.
-            
-            IMPORTANT: Lansones has COMPOUND PINNATE LEAVES with 5-7 leaflets per leaf. Each leaflet is oblong to elliptic, 
-            9-21 cm long, with smooth margins and prominent veins. Healthy leaves are dark green and glossy.
+            Expert agricultural pathologist specializing in lansones leaf diseases.
+            Analyze the provided image of lansones leaves for diseases, pests, and nutrient deficiencies.
+            Lansones have compound pinnate leaves with 5-7 leaflets.
 
-            Focus on identifying:
-            1. Leaf diseases (leaf spots, blights, fungal infections, bacterial diseases)
-            2. Pest damage (insect feeding, mite damage, scale insects)
-            3. Nutrient deficiencies (yellowing patterns, chlorosis, necrosis)
-            4. Environmental stress indicators
-            5. Overall plant health status
-
-            Provide your response in the following JSON format:
+            IMPORTANT: Respond ONLY with a valid JSON object in this exact format, no other text:
             {
                 "diseaseDetected": boolean,
-                "diseaseName": "string or null",
-                "confidenceLevel": float (0.0 to 1.0),
-                "affectedPart": "leaves",
-                "symptoms": ["list of observed symptoms"],
-                "recommendations": ["list of actionable recommendations"],
+                "diseaseName": "string",
+                "confidenceLevel": float,
+                "symptoms": ["string"],
+                "recommendations": ["string"],
                 "severity": "low|medium|high|none",
                 "leafHealthStatus": "healthy|stressed|diseased|severely_damaged"
             }
 
-            Be specific about lansones-related leaf issues such as:
-            
-            FUNGAL DISEASES:
-            - Cercospora Leaf Spot: Small, circular brown spots (2-5mm) with gray centers and dark brown margins
-            - Phyllosticta Leaf Spot: Irregular brown spots with dark purple margins, may have tiny black dots (pycnidia)
-            - Powdery Mildew (Oidium lansium): White, powdery fungal growth on upper leaf surfaces
-            - Downy Mildew: Yellow patches on upper surface with grayish-white growth underneath
-            - Anthracnose: Large, irregular brown to black spots, often along leaf margins or tips, may cause leaf curling
-            
-            BACTERIAL DISEASES:
-            - Bacterial Leaf Blight: Water-soaked lesions that turn brown or black, may have yellow halos
-            - Bacterial Leaf Spot: Small, dark brown to black spots with yellow halos
-            
-            PEST DAMAGE:
-            - Scale Insects: Small, round, brown or white bumps on leaf surfaces, sticky honeydew present
-            - Mealybugs: White, cottony masses on leaves, sticky honeydew, leaf yellowing
-            - Spider Mites: Fine webbing, stippling (tiny yellow dots), leaf bronzing or yellowing
-            - Thrips: Silver streaks, distorted leaves, black fecal spots
-            - Leaf Miners: Serpentine tunnels or blotches between leaf surfaces
-            - Caterpillars: Irregular holes, chewed leaf margins
-            
-            NUTRIENT DEFICIENCIES:
-            - Nitrogen: Uniform yellowing of older leaves, stunted growth
-            - Potassium: Yellowing and browning of leaf margins (leaf scorch), older leaves affected first
-            - Magnesium: Interveinal chlorosis (yellowing between veins) on older leaves
-            - Iron: Interveinal chlorosis on young leaves, veins remain green
-            - Manganese: Interveinal chlorosis with small necrotic spots
-            
-            ENVIRONMENTAL STRESS:
-            - Sunburn: Bleached or brown patches on leaf surfaces exposed to direct sun
-            - Wind Damage: Torn or tattered leaves, brown edges
-            - Water Stress: Wilting, leaf curling, brown tips
-            - Cold Damage: Blackened or water-soaked areas, especially on young growth
+            CRITICAL RULES - MUST FOLLOW:
+            1. If diseaseDetected is true, diseaseName MUST be a non-empty string (NEVER null, NEVER empty string "")
+            2. If diseaseDetected is false, diseaseName should be "None" or "Healthy"
+            3. Use specific disease/condition names: Cercospora Leaf Spot, Anthracnose, Scale Insects, Chlorosis, etc.
+            4. If unsure of exact disease but disease is present, use "Unidentified Disease" or "Unknown Leaf Condition"
+            5. confidenceLevel must be between 0.0 and 1.0
+            6. NEVER return null for diseaseName field
 
-            ANALYSIS GUIDELINES:
-            - Examine leaf color, texture, and any discoloration patterns
-            - Look for spots, lesions, or abnormal growths
-            - Check for signs of insects or their damage (holes, stippling, webbing)
-            - Assess overall leaf vigor and appearance
-            - Consider the distribution of symptoms (localized vs. widespread)
-            - Note if symptoms appear on older leaves, younger leaves, or both
+            Focus on lansones-specific issues like:
+            - Cercospora Leaf Spot: Brown spots with yellow halos
+            - Anthracnose: Dark, sunken lesions on leaves
+            - Scale insects: Small, brown, immobile insects on leaf surfaces
+            - Nutrient deficiencies: Yellowing (chlorosis), stunted growth
+            - Environmental stress: Wilting, browning edges
 
-            IMPORTANT FORMATTING RULES:
-            - Write all recommendations in formal, professional language
-            - Do NOT use asterisks, bullet points, or markdown formatting in the text
-            - Use complete sentences with proper punctuation
-            - Write recommendations as clear, actionable statements
-            - Avoid informal language or conversational tone
-            - Each recommendation should be a standalone sentence
-            - Do not use bold, italic, or any text decorations
-
-            If no disease is detected, still provide recommendations for preventive care and optimal growing conditions.
-            Always provide specific, actionable recommendations based on the observed symptoms.
+            Provide formal, professional recommendations in complete sentences.
+            If no disease is detected, provide preventive care recommendations.
         """.trimIndent()
 
         // Variety detection prompt for identifying lansones varieties
         private val VARIETY_DETECTION_PROMPT = """
-            You are an expert in lansones (Lansium domesticum) varieties and botany.
-            Analyze this lansones fruit image and identify the specific variety.
+            Expert in lansones varieties and botany.
+            Analyze the provided image to identify the lansones variety.
 
-            Focus on identifying distinguishing characteristics such as:
-            1. Size and shape of the fruit
-            2. Texture and color of the skin
-            3. Arrangement and appearance of the scales
-            4. Flesh characteristics (color, texture, juiciness)
-            5. Seed size and number
-
-            Known varieties of lansones include:
-            - Longkong: Sweet, juicy variety with thick, rough skin and prominent scales
-            - Duku: Sweet and slightly tangy variety with thin, smooth skin
-            - Paete: Small to medium-sized fruit with very sweet, translucent flesh
-            - Jolo: Large fruit with thick, rough skin and sweet, aromatic flesh
-
-            Provide your response in the following JSON format:
+            IMPORTANT: Respond ONLY with a valid JSON object in this exact format, no other text:
             {
                 "variety": "longkong|duku|paete|jolo|unknown",
-                "confidenceLevel": float (0.0 to 1.0),
-                "characteristics": ["list of observed distinguishing features"],
-                "description": "brief description of why this variety was identified"
+                "confidenceLevel": float,
+                "characteristics": ["string"],
+                "description": "string"
             }
 
-            IMPORTANT FORMATTING RULES:
-            - Write all text in formal, professional language
-            - Do NOT use asterisks, bullet points, or markdown formatting
-            - Use complete sentences with proper punctuation
-            - Avoid informal language or conversational tone
-
-            If you cannot confidently identify the variety, respond with "unknown" for the variety field.
-            Be accurate in your identification and only classify with high confidence.
-        """.trimIndent()
-
-        // Initial detection prompt to determine if the image contains lansones
-        private val DETECTION_PROMPT = """
-            Analyze this image to determine what type of item is shown.
-
-            First, determine if this image contains lansones (Lansium domesticum) fruit or leaves:
-            
-            LANSONES FRUIT CHARACTERISTICS:
-            - Small, round to oval tropical fruits, typically 2-4 cm in diameter
-            - Yellow-brown to tan colored skin when ripe
-            - Grow in clusters (racemes) hanging from branches
-            - Thin, leathery skin with a slightly rough texture
-            - May have small scales or bumps on the surface
-            - Translucent white flesh visible if cut open
-            
-            LANSONES LEAF CHARACTERISTICS:
-            - Compound pinnate leaves (multiple leaflets arranged along a central stem)
-            - Each leaf typically has 5-7 leaflets (sometimes up to 9)
-            - Leaflets are oblong to elliptic in shape, 9-21 cm long and 5-10 cm wide
-            - Leaflets have prominent midribs and lateral veins
-            - Leaf surface is smooth and glossy, dark green on top, lighter green underneath
-            - Leaflets are arranged alternately or opposite along the rachis (leaf stem)
-            - Leaf margins are entire (smooth, not serrated)
-            - New leaves may have a reddish or bronze tint
-            - Leaves grow in an alternate arrangement on branches
-            
-            IMPORTANT: Lansones leaves are COMPOUND leaves with multiple leaflets, not simple single leaves.
-            Look for the characteristic pinnate arrangement with 5-7 oval leaflets per leaf.
-
-            Provide your response in the following JSON format:
-            {
-                "isLansones": boolean,
-                "itemType": "lansones_fruit|lansones_leaves|other",
-                "confidence": float (0.0 to 1.0),
-                "description": "brief factual description of what is visible in the image"
-            }
-
-            IMPORTANT FORMATTING RULES:
-            - Write all text in formal, professional language
-            - Do NOT use asterisks, bullet points, or markdown formatting
-            - Use complete sentences with proper punctuation
-            - Avoid informal language or conversational tone
-
-            Be accurate in your identification. Only classify as lansones if you are confident it matches the botanical characteristics described above.
-            If you see compound leaves with 5-7 oval leaflets arranged along a central stem, it is likely lansones leaves.
+            Focus on distinguishing characteristics like fruit size, shape, skin texture, and color.
+            Known varieties: Longkong, Duku, Paete, Jolo.
+            If unsure, respond with "unknown" for the variety.
         """.trimIndent()
 
         // Neutral analysis prompt for non-lansones items
         private val NEUTRAL_ANALYSIS_PROMPT = """
-            Analyze this image and provide only factual, objective observations without any recommendations, evaluations, or assessments.
+            Analyze the image and provide factual, objective observations.
 
-            Focus on providing:
-            1. Technical specifications and measurable properties
-            2. Observable characteristics and features
-            3. Quantitative metrics where applicable
-            4. Factual descriptions of what is detected
-
-            Provide your response in the following JSON format:
+            IMPORTANT: Respond ONLY with a valid JSON object in this exact format, no other text:
             {
-                "diseaseDetected": false,
-                "diseaseName": null,
-                "confidenceLevel": 1.0,
-                "affectedPart": "general",
-                "symptoms": [],
-                "recommendations": [],
-                "severity": "none",
-                "observations": ["list of factual observations"],
-                "measurements": ["list of measurable properties"],
-                "characteristics": ["list of observable features"]
+                "observations": ["string"],
+                "measurements": ["string"],
+                "characteristics": ["string"]
             }
 
-            IMPORTANT FORMATTING RULES:
-            - Write all text in formal, professional language
-            - Do NOT use asterisks, bullet points, or markdown formatting
-            - Use complete sentences with proper punctuation
-            - Avoid informal language or conversational tone
-            - Do not include any subjective judgments, health assessments, safety evaluations, or recommendations
-            - Only report factual data and observable characteristics
+            Do not include subjective judgments, health assessments, or recommendations.
         """.trimIndent()
     }
     
     /**
      * Analyzes an image, first detecting if it contains lansones, then applying appropriate analysis
+     * Uses caching to return same results for identical images
      */
     suspend fun analyzeImage(
         imageUri: Uri,
@@ -282,8 +186,34 @@ class AnalysisService(
                     )
                 }
 
+                // Generate hash for the image to check cache
+                val imageHash = cache.generateImageHash(imageBytes)
+
+                // Check if we have a cached result for this image
+                val cachedResult = cache.get(imageHash)
+                if (cachedResult != null) {
+                    totalAnalyses++
+                    cacheHits++
+                    Log.d(TAG, "✓ Cache HIT - Returning cached result (${getPerformanceStats()})")
+                    Log.d(TAG, "Image hash: ${imageHash.take(16)}...")
+                    return@withContext Result.success(cachedResult)
+                }
+
+                totalAnalyses++
+                Log.d(TAG, "✗ Cache MISS - Performing new analysis (${getPerformanceStats()})")
+                Log.d(TAG, "Image hash: ${imageHash.take(16)}...")
+
+                // Preprocess the image
+                val preprocessedBitmap = preprocessedBitmapCache.get(imageHash) ?: run {
+                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        ?: return@withContext Result.failure(AnalysisException("Failed to decode image"))
+                    val processed = ImagePreprocessor.preprocessForAnalysis(bitmap)
+                    preprocessedBitmapCache.put(imageHash, processed)
+                    processed
+                }
+
                 // First, detect if the image contains lansones
-                val detectionResult = detectLansonesInImage(imageBytes, mimeType)
+                val detectionResult = detectLansonesInImage(preprocessedBitmap)
                 if (detectionResult.isFailure) {
                     return@withContext detectionResult.map {
                         // Fallback to neutral analysis if detection fails
@@ -306,9 +236,9 @@ class AnalysisService(
 
                 // Perform appropriate analysis
                 val analysisResult = when (actualAnalysisType) {
-                    AnalysisType.FRUIT -> performLansonesAnalysis(imageBytes, mimeType, FRUIT_ANALYSIS_PROMPT, actualAnalysisType)
-                    AnalysisType.LEAVES -> performLansonesAnalysis(imageBytes, mimeType, LEAF_ANALYSIS_PROMPT, actualAnalysisType)
-                    AnalysisType.NON_LANSONES -> performNeutralAnalysis(imageBytes, mimeType, detection.description)
+                    AnalysisType.FRUIT -> performLansonesAnalysis(preprocessedBitmap, FRUIT_ANALYSIS_PROMPT, actualAnalysisType, imageBytes, mimeType)
+                    AnalysisType.LEAVES -> performLansonesAnalysis(preprocessedBitmap, LEAF_ANALYSIS_PROMPT, actualAnalysisType, imageBytes, mimeType)
+                    AnalysisType.NON_LANSONES -> performNeutralAnalysis(preprocessedBitmap, detection.description)
                 }
 
                 Result.success(analysisResult)
@@ -328,27 +258,19 @@ class AnalysisService(
      * Detects if the image contains lansones fruit or leaves
      */
     private suspend fun detectLansonesInImage(
-        imageBytes: ByteArray,
-        mimeType: String
+        preprocessedBitmap: Bitmap
     ): Result<DetectionResult> {
         return try {
-            val request = requestBuilder.createImageAnalysisRequest(
-                imageBytes = imageBytes,
-                mimeType = mimeType,
-                prompt = DETECTION_PROMPT
-            )
-
-            val apiResult = apiClient.analyzeImage(request)
+            // Use SDK client - much faster!
+            val apiResult = sdkClient.analyzeImage(preprocessedBitmap, DETECTION_PROMPT)
+            
             if (apiResult.isFailure) {
                 return Result.failure(
                     AnalysisException("Detection API call failed: ${apiResult.exceptionOrNull()?.message}")
                 )
             }
 
-            val response = apiResult.getOrNull()!!
-            val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                ?: return Result.failure(AnalysisException("Empty detection response"))
-
+            val responseText = apiResult.getOrNull()!!
             val detection = parseDetectionResponse(responseText)
             Result.success(detection)
         } catch (e: Exception) {
@@ -360,25 +282,20 @@ class AnalysisService(
      * Performs lansones-specific analysis with automatic variety detection
      */
     private suspend fun performLansonesAnalysis(
-        imageBytes: ByteArray,
-        mimeType: String,
+        preprocessedBitmap: Bitmap,
         prompt: String,
-        analysisType: AnalysisType
+        analysisType: AnalysisType,
+        imageBytes: ByteArray,
+        mimeType: String
     ): AnalysisResult {
-        // First, perform the main analysis (disease detection)
-        val request = requestBuilder.createImageAnalysisRequest(
-            imageBytes = imageBytes,
-            mimeType = mimeType,
-            prompt = prompt
-        )
-
-        val apiResult = apiClient.analyzeImage(request)
+        // Use SDK client - much faster!
+        val apiResult = sdkClient.analyzeImage(preprocessedBitmap, prompt)
         if (apiResult.isFailure) {
             throw AnalysisException("Lansones analysis API call failed: ${apiResult.exceptionOrNull()?.message}")
         }
 
-        val response = apiResult.getOrNull()!!
-        val mainAnalysisResult = parseGeminiResponse(response, analysisType)
+        val responseText = apiResult.getOrNull()!!
+        val mainAnalysisResult = parseResponseText(responseText, analysisType)
         
         // Then, automatically detect the variety for lansones fruit
         var varietyResult: VarietyAnalysisResult? = null
@@ -408,26 +325,26 @@ class AnalysisService(
         mimeType: String
     ): VarietyAnalysisResult? {
         return try {
-            val request = requestBuilder.createImageAnalysisRequest(
-                imageBytes = imageBytes,
-                mimeType = mimeType,
-                prompt = VARIETY_DETECTION_PROMPT
-            )
+            // Convert bytes to bitmap for SDK
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                ?: return null
 
-            val apiResult = apiClient.analyzeImage(request)
+            // Preprocess image for optimal analysis
+            val preprocessedBitmap = ImagePreprocessor.preprocessForAnalysis(bitmap)
+
+            // Use SDK client
+            val apiResult = sdkClient.analyzeImage(preprocessedBitmap, VARIETY_DETECTION_PROMPT)
             if (apiResult.isFailure) {
                 // Don't fail the entire analysis if variety detection fails
                 return null
             }
 
-            val response = apiResult.getOrNull()!!
-            val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                ?: return null
+            val responseText = apiResult.getOrNull()!!
 
             // Extract JSON from response text if it's embedded in markdown or other text
             val jsonText = extractJsonFromText(responseText)
             
-            val varietyResponse = gson.fromJson(jsonText, VarietyAnalysisResponse::class.java)
+            val varietyResponse = json.decodeFromString<VarietyAnalysisResponse>(jsonText)
             
             VarietyAnalysisResult(
                 variety = varietyResponse.variety?.let { LansonesVariety.fromString(it) } ?: LansonesVariety.UNKNOWN,
@@ -445,24 +362,18 @@ class AnalysisService(
      * Performs neutral analysis for non-lansones items
      */
     private suspend fun performNeutralAnalysis(
-        imageBytes: ByteArray,
-        mimeType: String,
+        preprocessedBitmap: Bitmap,
         itemDescription: String
     ): AnalysisResult {
-        val request = requestBuilder.createImageAnalysisRequest(
-            imageBytes = imageBytes,
-            mimeType = mimeType,
-            prompt = NEUTRAL_ANALYSIS_PROMPT
-        )
-
-        val apiResult = apiClient.analyzeImage(request)
+        // Use SDK client
+        val apiResult = sdkClient.analyzeImage(preprocessedBitmap, NEUTRAL_ANALYSIS_PROMPT)
         if (apiResult.isFailure) {
             // Fallback to basic neutral result if API fails
             return createNeutralAnalysisResult(itemDescription)
         }
 
-        val response = apiResult.getOrNull()!!
-        return parseNeutralResponse(response, itemDescription)
+        val responseText = apiResult.getOrNull()!!
+        return parseNeutralResponseText(responseText, itemDescription)
     }
 
     /**
@@ -483,10 +394,27 @@ class AnalysisService(
     }
 
     /**
-     * Parses Gemini API response into structured analysis result
+     * Parses response text directly from SDK (new fast approach)
      */
+    private fun parseResponseText(
+        responseText: String,
+        analysisType: AnalysisType
+    ): AnalysisResult {
+        return try {
+            // Try to parse as JSON first
+            parseJsonResponse(responseText, analysisType)
+        } catch (e: Exception) {
+            // Fallback to text-based parsing
+            parseTextResponse(responseText, analysisType)
+        }
+    }
+    
+    /**
+     * Parses Gemini API response into structured analysis result (legacy OkHttp approach)
+     */
+    @Deprecated("Use parseResponseText with SDK client instead")
     private fun parseGeminiResponse(
-        response: GeminiResponse,
+        response: com.ml.lansonesscan.data.remote.dto.GeminiResponse,
         analysisType: AnalysisType
     ): AnalysisResult {
         if (response.candidates.isEmpty()) {
@@ -499,14 +427,7 @@ class AnalysisService(
         }
         
         val responseText = candidate.content.parts.first().text
-        
-        return try {
-            // Try to parse as JSON first
-            parseJsonResponse(responseText, analysisType)
-        } catch (e: Exception) {
-            // Fallback to text-based parsing
-            parseTextResponse(responseText, analysisType)
-        }
+        return parseResponseText(responseText, analysisType)
     }
     
     /**
@@ -517,20 +438,43 @@ class AnalysisService(
         val jsonText = extractJsonFromText(responseText)
         
         return try {
-            val jsonResponse = gson.fromJson(jsonText, JsonAnalysisResponse::class.java)
+            val jsonResponse = json.decodeFromString<JsonAnalysisResponse>(jsonText)
+            
+            // CRITICAL: Ensure disease name is never null/blank when disease is detected
+            // This prevents validation errors in ScanResult
+            val finalDiseaseDetected: Boolean
+            val finalDiseaseName: String?
+            
+            if (jsonResponse.diseaseDetected) {
+                // Disease detected - ensure we have a valid disease name
+                if (jsonResponse.diseaseName.isNullOrBlank()) {
+                    // AI detected disease but didn't provide name - use fallback
+                    finalDiseaseDetected = true
+                    finalDiseaseName = "Unidentified Disease"
+                    Log.w(TAG, "Disease detected but no name provided by AI. Using fallback: 'Unidentified Disease'")
+                } else {
+                    // AI provided both detection and name - use as is
+                    finalDiseaseDetected = true
+                    finalDiseaseName = jsonResponse.diseaseName
+                }
+            } else {
+                // No disease detected - ensure disease name is null
+                finalDiseaseDetected = false
+                finalDiseaseName = null
+            }
             
             AnalysisResult(
-                diseaseDetected = jsonResponse.diseaseDetected,
-                diseaseName = jsonResponse.diseaseName,
+                diseaseDetected = finalDiseaseDetected,
+                diseaseName = finalDiseaseName,
                 confidenceLevel = jsonResponse.confidenceLevel,
                 affectedPart = jsonResponse.affectedPart ?: analysisType.name.lowercase(),
                 symptoms = jsonResponse.symptoms ?: emptyList(),
                 recommendations = jsonResponse.recommendations ?: emptyList(),
-                severity = jsonResponse.severity ?: "medium",
+                severity = if (finalDiseaseDetected) (jsonResponse.severity ?: "medium") else "none",
                 rawResponse = responseText,
                 detectedAnalysisType = analysisType
             )
-        } catch (e: JsonSyntaxException) {
+        } catch (e: SerializationException) {
             // If JSON parsing fails, throw exception to trigger fallback
             throw AnalysisException("Failed to parse JSON response: ${e.message}", e)
         }
@@ -759,42 +703,49 @@ class AnalysisService(
     private fun parseDetectionResponse(responseText: String): DetectionResult {
         return try {
             val jsonText = extractJsonFromText(responseText)
-            gson.fromJson(jsonText, DetectionResult::class.java)
+            json.decodeFromString<DetectionResult>(jsonText)
         } catch (e: Exception) {
-            // Fallback to text-based detection
+            // Fallback to text-based detection for cases where JSON parsing fails
+            // This is a more robust approach that analyzes the content of the response
             val lowerText = responseText.lowercase()
-            val isLansones = lowerText.contains("lansones") || lowerText.contains("lansium domesticum")
             
-            // Determine if it's leaves or fruit based on keywords
+            // Check if the AI determined it's lansones based on the response content
+            val isLansones = lowerText.contains("lansones") || 
+                           lowerText.contains("lansium") || 
+                           lowerText.contains("is lansones") ||
+                           lowerText.contains("contains lansones") ||
+                           lowerText.contains("lansones fruit") ||
+                           lowerText.contains("lansones leaves") ||
+                           lowerText.contains("lansones leaf")
+            
+            // Determine if it's leaves or fruit based on keywords in the AI's response
             val itemType = when {
                 !isLansones -> "other"
                 lowerText.contains("leaf") || lowerText.contains("leaves") || 
                 lowerText.contains("foliage") || lowerText.contains("leaflet") ||
-                lowerText.contains("compound") || lowerText.contains("pinnate") -> "lansones_leaves"
+                lowerText.contains("compound") || lowerText.contains("pinnate") ||
+                lowerText.contains("5 leaflets") || lowerText.contains("7 leaflets") -> "lansones_leaves"
                 lowerText.contains("fruit") || lowerText.contains("berry") || 
                 lowerText.contains("cluster") -> "lansones_fruit"
-                else -> "lansones_fruit" // Default to fruit if unclear
+                else -> "other" // If we can't determine, classify as other
             }
             
             DetectionResult(
-                isLansones = isLansones,
+                isLansones = isLansones && itemType != "other",
                 itemType = itemType,
-                confidence = 0.5f,
-                description = "Item detected in image"
+                confidence = if (isLansones && itemType != "other") 0.7f else 0.3f,
+                description = "Fallback detection based on response content"
             )
         }
     }
 
     /**
-     * Parses neutral analysis response for non-lansones items
+     * Parses neutral analysis response text (new SDK approach)
      */
-    private fun parseNeutralResponse(response: GeminiResponse, itemDescription: String): AnalysisResult {
-        val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
-            ?: return createNeutralAnalysisResult(itemDescription)
-
+    private fun parseNeutralResponseText(responseText: String, itemDescription: String): AnalysisResult {
         return try {
             val jsonText = extractJsonFromText(responseText)
-            val neutralResponse = gson.fromJson(jsonText, NeutralAnalysisResponse::class.java)
+            val neutralResponse = json.decodeFromString<NeutralAnalysisResponse>(jsonText)
 
             AnalysisResult(
                 diseaseDetected = false,
@@ -811,11 +762,22 @@ class AnalysisService(
             createNeutralAnalysisResult(itemDescription)
         }
     }
+    
+    /**
+     * Parses neutral analysis response for non-lansones items (legacy)
+     */
+    @Deprecated("Use parseNeutralResponseText with SDK client instead")
+    private fun parseNeutralResponse(response: com.ml.lansonesscan.data.remote.dto.GeminiResponse, itemDescription: String): AnalysisResult {
+        val responseText = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+            ?: return createNeutralAnalysisResult(itemDescription)
+        return parseNeutralResponseText(responseText, itemDescription)
+    }
 }
 
 /**
  * Data class representing the result of image analysis
  */
+@Serializable
 data class AnalysisResult(
     val diseaseDetected: Boolean,
     val diseaseName: String?,
@@ -832,6 +794,7 @@ data class AnalysisResult(
 /**
  * Data class for variety analysis results
  */
+@Serializable
 data class VarietyAnalysisResult(
     val variety: LansonesVariety,
     val confidenceLevel: Float,
@@ -842,6 +805,7 @@ data class VarietyAnalysisResult(
 /**
  * Data class for parsing JSON responses from Gemini API
  */
+@Serializable
 data class JsonAnalysisResponse(
     val diseaseDetected: Boolean,
     val diseaseName: String?,
@@ -857,6 +821,7 @@ data class JsonAnalysisResponse(
 /**
  * Data class for variety analysis responses
  */
+@Serializable
 data class VarietyAnalysisResponse(
     val variety: String?,
     val confidenceLevel: Float,
@@ -867,6 +832,7 @@ data class VarietyAnalysisResponse(
 /**
  * Data class for detection results
  */
+@Serializable
 data class DetectionResult(
     val isLansones: Boolean,
     val itemType: String,
@@ -877,6 +843,7 @@ data class DetectionResult(
 /**
  * Data class for neutral analysis responses
  */
+@Serializable
 data class NeutralAnalysisResponse(
     val diseaseDetected: Boolean = false,
     val diseaseName: String? = null,

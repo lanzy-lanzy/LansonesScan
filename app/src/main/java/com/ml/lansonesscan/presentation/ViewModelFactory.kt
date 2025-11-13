@@ -5,8 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.ml.lansonesscan.data.local.database.LansonesDatabase
 import com.ml.lansonesscan.data.local.storage.ImageStorageManager
-import com.ml.lansonesscan.data.remote.api.GeminiApiClient
-import com.ml.lansonesscan.data.remote.api.GeminiRequestBuilder
+import com.ml.lansonesscan.data.remote.api.GeminiSdkClient
 import com.ml.lansonesscan.data.remote.service.AnalysisService
 import com.ml.lansonesscan.data.repository.ScanRepositoryImpl
 import com.ml.lansonesscan.domain.usecase.*
@@ -24,9 +23,8 @@ class ViewModelFactory(
 ) : ViewModelProvider.Factory {
 
     private val database by lazy { LansonesDatabase.getDatabase(context) }
-    private val apiClient by lazy { GeminiApiClient() }
-    private val requestBuilder by lazy { GeminiRequestBuilder() }
-    private val analysisService by lazy { AnalysisService(apiClient, requestBuilder) }
+    private val sdkClient by lazy { GeminiSdkClient() }
+    private val analysisService by lazy { AnalysisService(sdkClient) }
     private val imageStorageManager by lazy { ImageStorageManager(context) }
     
     private val repository by lazy { 

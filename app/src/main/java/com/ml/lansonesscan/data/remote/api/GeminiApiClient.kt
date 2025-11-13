@@ -23,8 +23,8 @@ class GeminiApiClient {
         private const val TAG = "GeminiApiClient"
         private const val BASE_URL = "https://generativelanguage.googleapis.com"
         private const val API_VERSION = "v1beta"
-        private const val MODEL_NAME = "gemini-2.5-pro"
-        private const val TIMEOUT_SECONDS = 60L
+        private const val MODEL_NAME = "gemini-2.0-flash-exp"
+        private const val TIMEOUT_SECONDS = 30L
         
         // Content types
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
@@ -69,8 +69,32 @@ class GeminiApiClient {
                     val responseBody = resp.body?.string()
                     
                     if (resp.isSuccessful && responseBody != null) {
-                        Log.d(TAG, "API request successful")
+                        Log.d(TAG, "API request successful - Status: ${resp.code}")
+                        Log.d(TAG, "Response body preview: ${responseBody.take(500)}")
+                        
                         val geminiResponse = gson.fromJson(responseBody, GeminiResponse::class.java)
+                        
+                        // Validate response has content
+                        if (geminiResponse.candidates.isEmpty()) {
+                            Log.e(TAG, "Response has no candidates")
+                            Log.e(TAG, "Full response: $responseBody")
+                            return@withContext Result.failure(GeminiApiException(
+                                code = resp.code,
+                                message = "API returned empty response - no candidates generated"
+                            ))
+                        }
+                        
+                        val firstCandidate = geminiResponse.candidates.firstOrNull()
+                        if (firstCandidate?.content?.parts?.isEmpty() != false) {
+                            Log.e(TAG, "Response candidate has no content parts")
+                            Log.e(TAG, "Full response: $responseBody")
+                            return@withContext Result.failure(GeminiApiException(
+                                code = resp.code,
+                                message = "API returned empty content - no text generated"
+                            ))
+                        }
+                        
+                        Log.d(TAG, "Response validated successfully with ${geminiResponse.candidates.size} candidate(s)")
                         Result.success(geminiResponse)
                     } else {
                         Log.e(TAG, "API request failed with code: ${resp.code}")

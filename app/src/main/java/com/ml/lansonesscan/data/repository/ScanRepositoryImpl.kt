@@ -96,12 +96,32 @@ class ScanRepositoryImpl(
                     null to null
                 }
                 
+                // CRITICAL: Ensure disease name is never null when disease is detected
+                // This prevents validation errors in ScanResult constructor
+                val finalDiseaseDetected: Boolean
+                val finalDiseaseName: String?
+                
+                if (analysis.diseaseDetected) {
+                    if (analysis.diseaseName.isNullOrBlank()) {
+                        // Disease detected but no name - use fallback
+                        finalDiseaseDetected = true
+                        finalDiseaseName = "Unidentified Disease"
+                        Log.w(TAG, "Disease detected but no name in analysis result. Using fallback.")
+                    } else {
+                        finalDiseaseDetected = true
+                        finalDiseaseName = analysis.diseaseName
+                    }
+                } else {
+                    finalDiseaseDetected = false
+                    finalDiseaseName = null
+                }
+                
                 // Create scan result using the detected analysis type
                 val scanResult = ScanResult.create(
                     imagePath = savedImagePath,
                     analysisType = analysis.detectedAnalysisType,
-                    diseaseDetected = analysis.diseaseDetected,
-                    diseaseName = analysis.diseaseName,
+                    diseaseDetected = finalDiseaseDetected,
+                    diseaseName = finalDiseaseName,
                     confidenceLevel = analysis.confidenceLevel,
                     recommendations = analysis.recommendations,
                     metadata = metadata,
